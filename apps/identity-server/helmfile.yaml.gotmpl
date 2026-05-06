@@ -1,7 +1,7 @@
 releases:
   - name: identity-server
     chart: ./charts/{{`{{ .Release.Name }}`}}
-    namespace: "platform-{{`{{ .Environment.Name }}`}}"
+    namespace: "platform-{{ .Environment.Name }}"
     missingFileHandler: Warn
     values:
     - config/values.yaml.gotmpl
