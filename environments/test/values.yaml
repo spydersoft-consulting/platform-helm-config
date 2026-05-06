@@ -1,0 +1,3 @@
+environment_hostname: mattgerega.net
+env_name: test
+alloy_otlp_collector: http://nonproduction-grafana-alloy.grafana:4317

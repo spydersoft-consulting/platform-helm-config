@@ -1,0 +1,29 @@
+stages:
+- template: stages/stages-generate-commit-manifests/v1.yml@templates
+  parameters:
+    environmentName: "stage"
+    helmfileDirectory: ./
+    argoRepoName: ops_nonprod_cluster
+    argoBaseDir: apps/platform
+    helmfileVersion: "1.1.5"
+
+- template: stages/stages-generate-commit-manifests/v1.yml@templates
+  parameters:
+    environmentName: "production"
+    helmfileDirectory: ./
+    argoRepoName: ops_prod_cluster
+    argoBaseDir: apps/platform
+    helmfileVersion: "1.1.5"
+    pregenerateSteps:  
+      - script: |
+          git config --global user.email "gerega@gmail.com"
+          git config --global user.name "CI/CD User"
+          cd $(Build.SourcesDirectory)
+          git checkout main
+          git pull --rebase
+          
+          cp $(Build.SourcesDirectory)/environments/stage/images.yaml $(Build.SourcesDirectory)/environments/production/images.yaml -f
+          git add --all
+          git commit -m "Promote Stage To Production [skip ci]"
+          git push origin main
+        displayName: Copy Stage Images to Production

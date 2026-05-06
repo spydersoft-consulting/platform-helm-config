@@ -1,0 +1,146 @@
+defaultPodOptions:
+  imagePullSecrets:
+    - name: cr-spydersoft-github
+
+controllers:
+  main:
+    enabled: true
+    containers:
+      main:
+        type: deployment
+        replicas: 1
+        strategy: RollingUpdate
+        image:
+          repository: ghcr.io/spyder007/identity_server
+          pullPolicy: IfNotPresent
+        probes:
+          liveness:
+            enabled: true
+            custom: true
+            spec:
+              httpGet:
+                path: /livez
+                port: 8080
+              initialDelaySeconds: 0
+              periodSeconds: 10
+              timeoutSeconds: 1
+              failureThreshold: 3
+          readiness:
+            enabled: true
+            custom: true
+            spec:
+              httpGet:
+                path: /readyz
+                port: 8080
+              initialDelaySeconds: 0
+              periodSeconds: 10
+              timeoutSeconds: 1
+              failureThreshold: 3
+  postgres:
+    containers:
+      main:
+        image:
+          repository: postgres
+          pullPolicy: IfNotPresent
+          tag: 17
+        envFrom:
+        - secretRef:
+            name: postgres-secrets
+        env:
+        - value: 5432
+          name: POSTGRES_PORT
+        - value: postgres-service
+          name: POSTGRES_HOST
+        - value: identity
+          name: POSTGRES_DB
+        strategy:
+          type: Recreate
+    strategy: Recreate
+    type: deployment
+    replicas: 1
+    enabled: true
+    revisionHistoryLimit: 3
+
+service:
+  main:
+    enabled: true
+    controller: main
+    nameOverride: main
+    primary: true
+    type: ClusterIP
+    ports:
+      http:
+        enabled: true
+        primary: true
+        port: 80
+        targetPort: 8080
+  postgres:
+    type: ClusterIP
+    primary: false
+    ports:
+      postgres:
+        enabled: true
+        port: 5432
+    controller: postgres
+configMaps:
+  postgres-init-data:
+    data:
+      init-data.sh: |
+        #!/bin/bash
+        set -e;
+        if [ -n "${POSTGRES_NON_ROOT_USER:-}" ] && [ -n "${POSTGRES_NON_ROOT_PASSWORD:-}" ]; then
+          psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-EOSQL
+            CREATE USER "${POSTGRES_NON_ROOT_USER}" WITH PASSWORD '${POSTGRES_NON_ROOT_PASSWORD}';
+            GRANT ALL PRIVILEGES ON DATABASE ${POSTGRES_DB} TO "${POSTGRES_NON_ROOT_USER}";
+            ALTER DATABASE ${POSTGRES_DB} OWNER TO "${POSTGRES_NON_ROOT_USER}";
+        EOSQL
+        else
+          echo "SETUP INFO: No Environment variables given!"
+        fi
+    enabled: true
+persistence:
+  postgres-init-data:
+    type: configMap
+    advancedMounts:
+      postgres:
+        main:
+        - subPath: init-data.sh
+          path: /docker-entrypoint-initdb.d/init-identity-user.sh
+    enabled: true
+    identifier: postgres-init-data
+  postgres-data:
+    advancedMounts:
+      postgres:
+        main:
+        - path: /var/lib/postgresql/data
+    storageClass: nfs-client
+    accessMode: ReadWriteMany
+    type: persistentVolumeClaim
+    size: 300Gi
+    enabled: true
+  postgres-secrets:
+    type: secret
+    name: postgres-secrets
+    enabled: true
+
+route:
+  main:
+    enabled: true
+    kind: HTTPRoute
+    parentRefs:
+      - name: main
+        namespace: envoy-gateway-system
+        group: gateway.networking.k8s.io
+        kind: Gateway
+    hostnames:
+    - auth.mattgerega.net
+    rules:
+    - matches:
+      - path:
+          type: PathPrefix
+          value: /
+      backendRefs:
+      - identifier: main
+        port: 80
+
+

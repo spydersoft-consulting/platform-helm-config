@@ -1,0 +1,14 @@
+bases:
+- environments.yaml
+---
+repositories:
+- name: common
+  url: https://bjw-s-labs.github.io/helm-charts
+
+
+helmfiles:
+  - path: apps/*/helmfile.yaml.gotmpl
+    values:
+    - environments/{{ .Environment.Name }}/values.yaml
+    - environments/{{ .Environment.Name }}/images.yaml
+      

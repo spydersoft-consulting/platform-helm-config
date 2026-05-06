@@ -1,0 +1,34 @@
+resources:
+  repositories:
+    - repository: ops_nonprod_cluster
+      type: github
+      endpoint: spydersoft-gh
+      name: spydersoft-consulting/ops-nonprod-cluster
+    - repository: ops_prod_cluster
+      type: github
+      endpoint: spydersoft-gh
+      name: spydersoft-consulting/ops-prod-cluster
+    - repository: templates
+      type: github
+      endpoint: spydersoft-gh
+      name: spydersoft-consulting/azure-devops-templates
+
+trigger:
+  batch: true
+  branches:
+    include:
+    - main 
+    - feature/*
+  paths:
+    exclude:
+    - README.md
+    - scripts/*
+
+pr: none
+
+extends:
+  ${{ if contains(variables['Build.SourceBranch'], 'main') }}:
+    template: release.yml
+  ${{ if not(contains(variables['Build.SourceBranch'], 'main')) }}:
+    template: feature.yml
+

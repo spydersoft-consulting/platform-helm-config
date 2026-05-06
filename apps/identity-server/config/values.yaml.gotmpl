@@ -1,0 +1,55 @@
+controllers:
+  main:
+    containers:
+      main:
+        image:
+          tag: {{ .Values.imageTags.identity_server }}
+        envFrom:
+        - configMapRef:
+            identifier: identity
+        - secretRef:
+            name: identity-server-secrets
+
+configMaps:
+  identity:
+    enabled: true
+    data:
+      Identity__AuthorityUrl : ""
+      Serilog__MinimumLevel__Default: "Warning"
+      Identity__AuthorityUrl : "https://auth.{{ .Values.environment_hostname }}"
+      Telemetry__Trace__Otlp__Endpoint: "{{ .Values.alloy_otlp_collector}}"
+      Telemetry__Log__Otlp__Endpoint: "{{ .Values.alloy_otlp_collector}}"
+      Telemetry__Metrics__Otlp__Endpoint: "{{ .Values.alloy_otlp_collector}}"
+
+      {{ if ne .Environment.Name "production" }}
+      Telemetry__ActivitySourceName: "Identity.{{ title .Values.env_name }}.Activity"
+      Telemetry__MeterName: "Identity.{{ title .Values.env_name }}.Meter"
+      Telemetry__ServiceName: "Identity.{{ title .Values.env_name }}"
+      {{ end }}
+
+      {{ if eq .Environment.Name "test"  }}
+      Serilog__MinimumLevel__Default: "Information"
+      Serilog__MinimumLevel__Override__Microsoft: "Information"
+      Serilog__MinimumLevel__Override__System: "Information"
+      {{ else }}
+      Serilog__MinimumLevel__Default: "Warning"
+      {{ end }}
+      AllowedOrigins__0: "https://*.{{ .Values.environment_hostname }}"
+      {{ if eq .Environment.Name "test"  }}
+      AllowedOrigins__1: "http://localhost:3000"
+      {{ end }}
+
+route:
+  main:
+    hostnames:
+    - auth.{{ .Values.environment_hostname }}
+
+vault:
+  environment: {{ .Environment.Name | quote }} 
+
+redis:
+  {{ if eq .Environment.Name "production"  }}
+  environment: "production"
+  {{ else }}
+  environment: "nonproduction"
+  {{ end }}

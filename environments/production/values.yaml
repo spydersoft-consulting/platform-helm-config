@@ -1,0 +1,3 @@
+environment_hostname: mattgerega.com
+env_name: production
+alloy_otlp_collector: http://production-grafana-alloy.grafana:4317

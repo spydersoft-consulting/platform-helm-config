@@ -1,0 +1,13 @@
+environments:
+  test:
+    values:
+    - environments/test/values.yaml
+    - environments/test/images.yaml
+  stage:
+    values:
+    - environments/stage/values.yaml
+    - environments/stage/images.yaml
+  production:
+    values:
+    - environments/production/values.yaml
+    - environments/production/images.yaml

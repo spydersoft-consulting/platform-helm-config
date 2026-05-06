@@ -1,0 +1,8 @@
+stages:
+- template: stages/stages-generate-commit-manifests/v1.yml@templates
+  parameters:
+    environmentName: "test"
+    helmfileDirectory: ./
+    argoRepoName: ops_nonprod_cluster
+    argoBaseDir: apps/platform
+    helmfileVersion: "1.1.5"
