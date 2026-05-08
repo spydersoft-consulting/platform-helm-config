@@ -22,27 +22,24 @@ controllers:
           - name: MONGO_INITDB_DATABASE
             value: audit
         probes:
-          # TCP socket probes instead of `mongosh ... ping` — the exec form opens an
-          # unauthenticated wire-protocol session every probe interval, which Mongo
-          # logs as "Connection not authenticating" at info level. tcpSocket avoids
-          # the protocol handshake entirely. If mongod hangs or crashes the listener
-          # goes away, so port-open is a sufficient liveness signal here.
+          # TCP socket probes via bjw-s common's native `type: TCP` form. The chart
+          # picks up the primary service port (27017) automatically. Timing fields go
+          # under `spec` (the common library reads them from `probeValues.spec.*`
+          # whether `custom` is true or false). An exec-based mongosh ping would
+          # instead open an unauthenticated wire-protocol session every probe interval,
+          # generating "Connection not authenticating" log spam.
           liveness:
             enabled: true
-            custom: true
+            type: TCP
             spec:
-              tcpSocket:
-                port: 27017
               initialDelaySeconds: 90
               periodSeconds: 30
               timeoutSeconds: 3
               failureThreshold: 3
           readiness:
             enabled: true
-            custom: true
+            type: TCP
             spec:
-              tcpSocket:
-                port: 27017
               initialDelaySeconds: 60
               periodSeconds: 10
               timeoutSeconds: 3
