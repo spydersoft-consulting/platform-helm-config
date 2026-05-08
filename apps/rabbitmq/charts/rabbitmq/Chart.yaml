@@ -1,0 +1,11 @@
+apiVersion: v2
+name: rabbitmq
+description: Single-node RabbitMQ broker for Spydersoft platform services.
+type: application
+version: 0.1.0
+appVersion: "3.13"
+
+dependencies:
+- name: common
+  version: 4.4.0
+  repository: https://bjw-s-labs.github.io/helm-charts
