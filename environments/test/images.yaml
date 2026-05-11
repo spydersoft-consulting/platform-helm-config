@@ -1,3 +1,4 @@
 imageTags:
   audit_api: 0.0.1-audit-infra.7
+  audit_processor: 0.0.1-audit-infra.7
   identity_server: 3.0.2-upgrade.10
