@@ -1,0 +1,49 @@
+controllers:
+  audit-processor:
+    containers:
+      main:
+        image:
+          tag: {{ .Values.imageTags.audit_processor }}
+  audit-api:
+    containers:
+      main:
+        image:
+          tag: {{ .Values.imageTags.audit_api }}
+
+configMaps:
+  audit:
+    enabled: true
+    data:
+      # --- Messaging ---
+      RabbitMq__Host: "rabbitmq"
+      RabbitMq__Port: "5672"
+      RabbitMq__VirtualHost: "/"
+      RabbitMq__Exchange: "spydersoft.messaging"
+      RabbitMq__ExchangeType: "topic"
+
+      # --- AuditApi auth (only consumed by audit-api; harmless on processor) ---
+      Auth__Authority: "https://auth.{{ .Values.environment_hostname }}"
+      Auth__Audience: "audit-api"
+
+      # --- Telemetry ---
+      Telemetry__Trace__Otlp__Endpoint: "{{ .Values.alloy_otlp_collector }}"
+      Telemetry__Log__Otlp__Endpoint: "{{ .Values.alloy_otlp_collector }}"
+      Telemetry__Metrics__Otlp__Endpoint: "{{ .Values.alloy_otlp_collector }}"
+      Telemetry__ServiceName: "Audit.{{ title .Values.env_name }}"
+      Telemetry__ActivitySourceName: "Audit.{{ title .Values.env_name }}.Activity"
+      Telemetry__MeterName: "Audit.{{ title .Values.env_name }}.Meter"
+
+      # --- Logging ---
+      {{ if eq .Environment.Name "test" }}
+      Serilog__MinimumLevel__Default: "Information"
+      {{ else }}
+      Serilog__MinimumLevel__Default: "Warning"
+      {{ end }}
+
+route:
+  audit-api:
+    hostnames:
+    - audit.{{ .Values.environment_hostname }}
+
+vault:
+  environment: {{ .Environment.Name | quote }}
