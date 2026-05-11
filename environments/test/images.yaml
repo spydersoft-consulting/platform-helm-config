@@ -2,8 +2,3 @@ imageTags:
   audit_api: 0.0.1-audit-infra.7
   audit_processor: 0.0.1-audit-infra.7
   identity_server: 3.0.2-upgrade.10
-  # Audit images don't exist yet — the audit repo's matching feature/audit-infra branch
-  # will produce real tags. Until then these placeholders cause ImagePullBackoff on the
-  # audit-processor + audit-api pods, which is expected and does not affect rabbitmq/mongodb.
-  audit_processor: 0.0.0
-  audit_api: 0.0.0
