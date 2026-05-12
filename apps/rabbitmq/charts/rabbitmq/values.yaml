@@ -1,0 +1,93 @@
+defaultPodOptions:
+  imagePullSecrets:
+    - name: cr-spydersoft-github
+
+controllers:
+  main:
+    enabled: true
+    type: deployment
+    replicas: 1
+    revisionHistoryLimit: 3
+    strategy: Recreate
+    containers:
+      main:
+        image:
+          repository: rabbitmq
+          pullPolicy: IfNotPresent
+          tag: 3-management
+        envFrom:
+          - secretRef:
+              name: rabbitmq-secrets
+        probes:
+          liveness:
+            enabled: true
+            custom: true
+            spec:
+              exec:
+                command: ["rabbitmq-diagnostics", "-q", "ping"]
+              initialDelaySeconds: 30
+              periodSeconds: 30
+              timeoutSeconds: 10
+              failureThreshold: 3
+          readiness:
+            enabled: true
+            custom: true
+            spec:
+              exec:
+                command: ["rabbitmq-diagnostics", "-q", "check_port_connectivity"]
+              initialDelaySeconds: 15
+              periodSeconds: 10
+              timeoutSeconds: 5
+              failureThreshold: 3
+          startup:
+            enabled: true
+            custom: true
+            spec:
+              exec:
+                command: ["rabbitmq-diagnostics", "-q", "check_running"]
+              periodSeconds: 10
+              timeoutSeconds: 10
+              failureThreshold: 30
+
+service:
+  main:
+    enabled: true
+    controller: main
+    primary: true
+    type: ClusterIP
+    ports:
+      amqp:
+        enabled: true
+        primary: true
+        port: 5672
+        targetPort: 5672
+      management:
+        enabled: true
+        port: 15672
+        targetPort: 15672
+
+persistence:
+  rabbitmq-data:
+    enabled: true
+    type: persistentVolumeClaim
+    storageClass: nfs-client
+    accessMode: ReadWriteMany
+    size: 10Gi
+    advancedMounts:
+      main:
+        main:
+          - path: /var/lib/rabbitmq
+  rabbitmq-secrets:
+    enabled: true
+    type: secret
+    name: rabbitmq-secrets
+
+# Management UI HTTPRoute is disabled by default. Enable per-env in
+# config/values.yaml.gotmpl if/when you want a public dashboard at
+# rabbitmq-mgmt.{environment_hostname}.
+route:
+  main:
+    enabled: false
+
+vault:
+  environment: ""

@@ -1,0 +1,107 @@
+defaultPodOptions:
+  imagePullSecrets:
+    - name: cr-spydersoft-github
+
+controllers:
+  audit-processor:
+    enabled: true
+    type: deployment
+    replicas: 1
+    revisionHistoryLimit: 3
+    containers:
+      main:
+        image:
+          repository: ghcr.io/spydersoft-consulting/audit-processor
+          pullPolicy: IfNotPresent
+        envFrom:
+          - configMapRef:
+              identifier: audit
+          - secretRef:
+              name: audit-secrets
+        probes:
+          liveness:
+            enabled: true
+            custom: true
+            spec:
+              httpGet: { path: /livez, port: 8080 }
+              initialDelaySeconds: 10
+              periodSeconds: 10
+              timeoutSeconds: 1
+              failureThreshold: 3
+          readiness:
+            enabled: true
+            custom: true
+            spec:
+              httpGet: { path: /readyz, port: 8080 }
+              initialDelaySeconds: 5
+              periodSeconds: 10
+              timeoutSeconds: 1
+              failureThreshold: 3
+
+  audit-api:
+    enabled: true
+    type: deployment
+    replicas: 1
+    revisionHistoryLimit: 3
+    containers:
+      main:
+        image:
+          repository: ghcr.io/spydersoft-consulting/audit-api
+          pullPolicy: IfNotPresent
+        envFrom:
+          - configMapRef:
+              identifier: audit
+          - secretRef:
+              name: audit-secrets
+        probes:
+          liveness:
+            enabled: true
+            custom: true
+            spec:
+              httpGet: { path: /livez, port: 8080 }
+              initialDelaySeconds: 10
+              periodSeconds: 10
+              timeoutSeconds: 1
+              failureThreshold: 3
+          readiness:
+            enabled: true
+            custom: true
+            spec:
+              httpGet: { path: /readyz, port: 8080 }
+              initialDelaySeconds: 5
+              periodSeconds: 10
+              timeoutSeconds: 1
+              failureThreshold: 3
+
+service:
+  audit-api:
+    enabled: true
+    controller: audit-api
+    nameOverride: audit-api
+    primary: true
+    type: ClusterIP
+    ports:
+      http:
+        enabled: true
+        primary: true
+        port: 80
+        targetPort: 8080
+
+route:
+  audit-api:
+    enabled: true
+    kind: HTTPRoute
+    parentRefs:
+      - name: main
+        namespace: envoy-gateway-system
+        group: gateway.networking.k8s.io
+        kind: Gateway
+    rules:
+      - matches:
+          - path: { type: PathPrefix, value: / }
+        backendRefs:
+          - identifier: audit-api
+            port: 80
+
+vault:
+  environment: ""

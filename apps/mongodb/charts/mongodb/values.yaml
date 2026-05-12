@@ -1,0 +1,113 @@
+defaultPodOptions:
+  imagePullSecrets:
+    - name: cr-spydersoft-github
+
+controllers:
+  main:
+    enabled: true
+    type: deployment
+    replicas: 1
+    revisionHistoryLimit: 3
+    strategy: Recreate
+    containers:
+      main:
+        image:
+          repository: mongo
+          pullPolicy: IfNotPresent
+          tag: "7"
+        envFrom:
+          - secretRef:
+              name: mongodb-secrets
+        env:
+          - name: MONGO_INITDB_DATABASE
+            value: audit
+        probes:
+          # TCP socket probes via bjw-s common's native `type: TCP` form. The chart
+          # picks up the primary service port (27017) automatically. Timing fields go
+          # under `spec` (the common library reads them from `probeValues.spec.*`
+          # whether `custom` is true or false). An exec-based mongosh ping would
+          # instead open an unauthenticated wire-protocol session every probe interval,
+          # generating "Connection not authenticating" log spam.
+          liveness:
+            enabled: true
+            type: TCP
+            spec:
+              initialDelaySeconds: 90
+              periodSeconds: 30
+              timeoutSeconds: 3
+              failureThreshold: 3
+          readiness:
+            enabled: true
+            type: TCP
+            spec:
+              initialDelaySeconds: 60
+              periodSeconds: 10
+              timeoutSeconds: 3
+              failureThreshold: 3
+
+service:
+  main:
+    enabled: true
+    controller: main
+    primary: true
+    type: ClusterIP
+    ports:
+      mongodb:
+        enabled: true
+        primary: true
+        port: 27017
+        targetPort: 27017
+
+configMaps:
+  mongo-init-data:
+    enabled: true
+    data:
+      init-audit-user.js: |
+        // Runs once on first boot, when the data directory is empty.
+        // Creates an audit-scoped user with readWrite on the audit database.
+        const auditUser = process.env.MONGO_NON_ROOT_USER;
+        const auditPassword = process.env.MONGO_NON_ROOT_PASSWORD;
+        if (auditUser && auditPassword) {
+          db = db.getSiblingDB('audit');
+          db.createUser({
+            user: auditUser,
+            pwd: auditPassword,
+            roles: [{ role: 'readWrite', db: 'audit' }],
+          });
+        } else {
+          print('SETUP INFO: MONGO_NON_ROOT_USER/PASSWORD not provided; skipping audit user creation');
+        }
+
+persistence:
+  mongo-init-data:
+    enabled: true
+    type: configMap
+    identifier: mongo-init-data
+    advancedMounts:
+      main:
+        main:
+          - subPath: init-audit-user.js
+            path: /docker-entrypoint-initdb.d/init-audit-user.js
+  mongo-data:
+    enabled: true
+    type: persistentVolumeClaim
+    storageClass: nfs-client
+    accessMode: ReadWriteMany
+    size: 50Gi
+    advancedMounts:
+      main:
+        main:
+          - path: /data/db
+  mongodb-secrets:
+    enabled: true
+    type: secret
+    name: mongodb-secrets
+
+# MongoDB stays cluster-internal — no public route. Cross-cluster reach is via
+# Linkerd-mirrored services.
+route:
+  main:
+    enabled: false
+
+vault:
+  environment: ""

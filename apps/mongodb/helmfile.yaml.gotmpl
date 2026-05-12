@@ -1,0 +1,8 @@
+releases:
+  - name: mongodb
+    chart: ./charts/{{`{{ .Release.Name }}`}}
+    namespace: "platform-{{ .Environment.Name }}"
+    missingFileHandler: Warn
+    values:
+    - config/values.yaml.gotmpl
+    - config/{{`{{ .Environment.Name }}`}}.yaml
