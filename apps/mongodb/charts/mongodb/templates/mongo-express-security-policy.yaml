@@ -1,0 +1,46 @@
+{{- if .Values.oidc.enabled }}
+{{- $hostname := index .Values.route "mongo-express" "hostnames" 0 }}
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: mongo-express-auth
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: {{ .Release.Name }}-mongo-express
+  oidc:
+    provider:
+      issuer: {{ .Values.oidc.issuer }}
+    clientID: {{ .Values.oidc.clientId }}
+    clientSecret:
+      name: mongo-express-oidc-secret
+      key: client_secret
+    scopes:
+      {{- range .Values.oidc.scopes }}
+      - {{ . }}
+      {{- end }}
+    redirectURL: "https://{{ $hostname }}/oauth2/callback"
+  jwt:
+    providers:
+      - name: identity-server
+        issuer: {{ .Values.oidc.issuer }}
+        remoteJWKS:
+          uri: {{ .Values.oidc.issuer }}/.well-known/openid-configuration/jwks
+        claimToHeaders:
+          - claim: role
+            header: x-user-role
+  authorization:
+    defaultAction: Deny
+    rules:
+      - name: require-developer
+        action: Allow
+        principal:
+          jwt:
+            provider: identity-server
+            claims:
+              - name: role
+                values:
+                  - developer
+{{- end }}

@@ -1,2 +1,19 @@
 vault:
   environment: {{ .Environment.Name | quote }}
+
+{{ if eq .Environment.Name "test" }}
+controllers:
+  mongo-express:
+    enabled: true
+
+service:
+  mongo-express:
+    enabled: true
+
+route:
+  mongo-express:
+    enabled: true
+
+oidc:
+  enabled: true
+{{ end }}
