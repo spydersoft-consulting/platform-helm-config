@@ -25,6 +25,7 @@ controllers:
 
   main:
     enabled: true
+    nameOverride: mongodb
     type: deployment
     replicas: 1
     revisionHistoryLimit: 1
@@ -68,6 +69,7 @@ controllers:
 service:
   main:
     enabled: true
+    nameOverride: mongodb
     controller: main
     primary: true
     type: ClusterIP
