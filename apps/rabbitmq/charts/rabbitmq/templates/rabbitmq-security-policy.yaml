@@ -15,7 +15,6 @@ spec:
     clientID: {{ .Values.oidc.clientId }}
     clientSecret:
       name: rabbitmq-oidc-secret
-      key: client_secret
     scopes:
       {{- range .Values.oidc.scopes }}
       - {{ . }}

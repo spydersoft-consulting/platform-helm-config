@@ -15,31 +15,9 @@ spec:
     clientID: {{ .Values.oidc.clientId }}
     clientSecret:
       name: mongo-express-oidc-secret
-      key: client_secret
     scopes:
       {{- range .Values.oidc.scopes }}
       - {{ . }}
       {{- end }}
     redirectURL: "https://{{ index .Values.route.main.hostnames 0 }}/oauth2/callback"
-  jwt:
-    providers:
-      - name: identity-server
-        issuer: {{ .Values.oidc.issuer }}
-        remoteJWKS:
-          uri: {{ .Values.oidc.issuer }}/.well-known/openid-configuration/jwks
-        claimToHeaders:
-          - claim: role
-            header: x-user-role
-  authorization:
-    defaultAction: Deny
-    rules:
-      - name: require-developer
-        action: Allow
-        principal:
-          jwt:
-            provider: identity-server
-            claims:
-              - name: role
-                values:
-                  - developer
 {{- end }}

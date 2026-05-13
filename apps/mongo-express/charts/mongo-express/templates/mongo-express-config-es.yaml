@@ -1,0 +1,28 @@
+{{- if .Values.vault.environment }}
+---
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: mongo-express-config-es
+spec:
+  refreshInterval: 1h0m0s
+  secretStoreRef:
+    name: vault-backend
+    kind: ClusterSecretStore
+  target:
+    name: mongo-express-config
+    template:
+      type: Opaque
+      engineVersion: v2
+      data:
+        ME_CONFIG_MONGODB_URL: {{ `"mongodb://{{ .root_user | urlquery }}:{{ .root_password | urlquery }}@mongodb:27017/"` }}
+  data:
+  - secretKey: root_user
+    remoteRef:
+      key: secrets-k8/audit/{{ .Values.vault.environment }}/mongodb
+      property: rootUser
+  - secretKey: root_password
+    remoteRef:
+      key: secrets-k8/audit/{{ .Values.vault.environment }}/mongodb
+      property: rootPassword
+{{- end }}
