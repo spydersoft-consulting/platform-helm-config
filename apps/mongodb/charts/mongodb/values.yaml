@@ -3,29 +3,8 @@ defaultPodOptions:
     - name: cr-spydersoft-github
 
 controllers:
-  mongo-express:
-    enabled: false
-    type: deployment
-    replicas: 1
-    containers:
-      main:
-        image:
-          repository: mongo-express
-          tag: "1.0.2"
-        envFrom:
-          - secretRef:
-              name: mongodb-secrets
-        env:
-          - name: ME_CONFIG_MONGODB_SERVER
-            value: mongodb
-          - name: ME_CONFIG_MONGODB_PORT
-            value: "27017"
-          - name: ME_CONFIG_BASICAUTH
-            value: "false"
-
   main:
     enabled: true
-    nameOverride: mongodb
     type: deployment
     replicas: 1
     revisionHistoryLimit: 1
@@ -69,7 +48,6 @@ controllers:
 service:
   main:
     enabled: true
-    nameOverride: mongodb
     controller: main
     primary: true
     type: ClusterIP
@@ -79,16 +57,6 @@ service:
         primary: true
         port: 27017
         targetPort: 27017
-
-  mongo-express:
-    enabled: false
-    controller: mongo-express
-    ports:
-      http:
-        enabled: true
-        primary: true
-        port: 8081
-        targetPort: 8081
 
 configMaps:
   mongo-init-data:
@@ -135,34 +103,11 @@ persistence:
     type: secret
     name: mongodb-secrets
 
+# MongoDB stays cluster-internal — no public route. Cross-cluster reach is via
+# Linkerd-mirrored services.
 route:
   main:
     enabled: false
-
-  mongo-express:
-    enabled: false
-    kind: HTTPRoute
-    parentRefs:
-      - name: main
-        namespace: envoy-gateway-system
-        group: gateway.networking.k8s.io
-        kind: Gateway
-    hostnames:
-      - mongo.mattgerega.net
-    rules:
-      - backendRefs:
-          - identifier: mongo-express
-            port: 8081
-
-oidc:
-  enabled: false
-  issuer: https://auth.mattgerega.com
-  clientId: platform-tools
-  vaultKey: platform-tools
-  scopes:
-    - openid
-    - profile
-    - roles
 
 vault:
   environment: ""

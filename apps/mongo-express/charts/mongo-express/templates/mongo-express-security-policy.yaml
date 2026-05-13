@@ -1,5 +1,4 @@
 {{- if .Values.oidc.enabled }}
-{{- $hostname := index .Values.route "mongo-express" "hostnames" 0 }}
 ---
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: SecurityPolicy
@@ -9,7 +8,7 @@ spec:
   targetRef:
     group: gateway.networking.k8s.io
     kind: HTTPRoute
-    name: {{ .Release.Name }}-mongo-express
+    name: {{ .Release.Name }}-main
   oidc:
     provider:
       issuer: {{ .Values.oidc.issuer }}
@@ -21,7 +20,7 @@ spec:
       {{- range .Values.oidc.scopes }}
       - {{ . }}
       {{- end }}
-    redirectURL: "https://{{ $hostname }}/oauth2/callback"
+    redirectURL: "https://{{ index .Values.route.main.hostnames 0 }}/oauth2/callback"
   jwt:
     providers:
       - name: identity-server

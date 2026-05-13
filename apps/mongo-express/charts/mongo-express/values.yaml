@@ -1,0 +1,67 @@
+defaultPodOptions:
+  imagePullSecrets:
+    - name: cr-spydersoft-github
+
+controllers:
+  main:
+    enabled: true
+    type: deployment
+    replicas: 1
+    containers:
+      main:
+        image:
+          repository: mongo-express
+          pullPolicy: IfNotPresent
+          tag: "1.0.2"
+        envFrom:
+          - secretRef:
+              name: mongodb-secrets
+        env:
+          - name: ME_CONFIG_MONGODB_SERVER
+            value: mongodb
+          - name: ME_CONFIG_MONGODB_PORT
+            value: "27017"
+          - name: ME_CONFIG_BASICAUTH
+            value: "false"
+
+service:
+  main:
+    enabled: true
+    controller: main
+    primary: true
+    type: ClusterIP
+    ports:
+      http:
+        enabled: true
+        primary: true
+        port: 8081
+        targetPort: 8081
+
+route:
+  main:
+    enabled: true
+    kind: HTTPRoute
+    parentRefs:
+      - name: main
+        namespace: envoy-gateway-system
+        group: gateway.networking.k8s.io
+        kind: Gateway
+    hostnames:
+      - mongo.mattgerega.net
+    rules:
+      - backendRefs:
+          - identifier: main
+            port: 8081
+
+oidc:
+  enabled: true
+  issuer: https://auth.mattgerega.com
+  clientId: platform-tools
+  vaultKey: platform-tools
+  scopes:
+    - openid
+    - profile
+    - roles
+
+vault:
+  environment: ""

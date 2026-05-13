@@ -1,0 +1,9 @@
+releases:
+  - name: mongo-express
+    chart: ./charts/{{`{{ .Release.Name }}`}}
+    namespace: "platform-{{ .Environment.Name }}"
+    installed: {{ eq .Environment.Name "test" }}
+    missingFileHandler: Warn
+    values:
+    - config/values.yaml.gotmpl
+    - config/{{`{{ .Environment.Name }}`}}.yaml
