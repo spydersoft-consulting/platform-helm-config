@@ -6,3 +6,6 @@ releases:
     values:
     - config/values.yaml.gotmpl
     - config/{{`{{ .Environment.Name }}`}}.yaml
+
+apiVersions:
+- gateway.networking.k8s.io/v1/HTTPRoute
