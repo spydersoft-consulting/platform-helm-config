@@ -8,7 +8,7 @@ spec:
   targetRef:
     group: gateway.networking.k8s.io
     kind: HTTPRoute
-    name: {{ .Release.Name }}-main
+    name: {{ .Release.Name }}
   oidc:
     provider:
       issuer: {{ .Values.oidc.issuer }}
