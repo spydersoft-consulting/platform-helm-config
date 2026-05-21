@@ -1,0 +1,23 @@
+{{- if .Values.oidc.enabled }}
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: {{ .Release.Name }}-auth
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: {{ .Release.Name }}
+  oidc:
+    provider:
+      issuer: {{ .Values.oidc.issuer }}
+    clientID: {{ .Values.oidc.clientId }}
+    clientSecret:
+      name: rabbitmq-oidc-secret
+    scopes:
+      {{- range .Values.oidc.scopes }}
+      - {{ . }}
+      {{- end }}
+    redirectURL: "https://{{ index .Values.route.main.hostnames 0 }}/oauth2/callback"
+{{- end }}

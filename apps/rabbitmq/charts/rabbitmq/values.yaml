@@ -7,7 +7,7 @@ controllers:
     enabled: true
     type: deployment
     replicas: 1
-    revisionHistoryLimit: 3
+    revisionHistoryLimit: 1
     strategy: Recreate
     containers:
       main:
@@ -82,12 +82,31 @@ persistence:
     type: secret
     name: rabbitmq-secrets
 
-# Management UI HTTPRoute is disabled by default. Enable per-env in
-# config/values.yaml.gotmpl if/when you want a public dashboard at
-# rabbitmq-mgmt.{environment_hostname}.
 route:
   main:
     enabled: false
+    kind: HTTPRoute
+    parentRefs:
+      - name: main
+        namespace: envoy-gateway-system
+        group: gateway.networking.k8s.io
+        kind: Gateway
+    hostnames:
+      - rabbitmq.mattgerega.net
+    rules:
+      - backendRefs:
+          - identifier: main
+            port: 15672
+
+oidc:
+  enabled: false
+  issuer: https://auth.mattgerega.com
+  clientId: platform-tools
+  vaultKey: platform-tools
+  scopes:
+    - openid
+    - profile
+    - roles
 
 vault:
   environment: ""

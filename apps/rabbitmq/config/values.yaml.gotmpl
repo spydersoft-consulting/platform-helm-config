@@ -1,2 +1,11 @@
 vault:
   environment: {{ .Environment.Name | quote }}
+
+{{ if eq .Environment.Name "test" }}
+route:
+  main:
+    enabled: true
+
+oidc:
+  enabled: true
+{{ end }}
