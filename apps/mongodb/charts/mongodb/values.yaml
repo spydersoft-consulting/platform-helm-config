@@ -7,7 +7,7 @@ controllers:
     enabled: true
     type: deployment
     replicas: 1
-    revisionHistoryLimit: 3
+    revisionHistoryLimit: 1
     strategy: Recreate
     containers:
       main:
