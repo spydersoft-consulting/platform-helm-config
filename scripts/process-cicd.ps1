@@ -42,12 +42,18 @@ Write-Host "Replacing tags in $imageFile"
 $imagePath = (Resolve-Path $imageFile).Path
 Push-Location ./scripts
 
+$imageArgs = @()
+
 foreach ($tag in $tags) {
     $tagSplit = $tag.Split("=")
-    $imageArgs += "--value imageTags.$($tagSplit[0])=$($tagSplit[1])"
+    $imageArgs += "--value"
+    $imageArgs += "imageTags.$($tagSplit[0])=$($tagSplit[1])"
 }
 
-Invoke-Expression "python ./edit-value.py $imageArgs $imagePath"
+& python ./edit-value.py @imageArgs $imagePath
+if ($LASTEXITCODE -ne 0) {
+    throw "edit-value.py failed with exit code $LASTEXITCODE"
+}
 Pop-Location
 
 Invoke-Expression "git add $imageFile"
