@@ -1,0 +1,36 @@
+controllers:
+  main:
+    containers:
+      main:
+        image:
+          tag: {{ .Values.imageTags.identity_admin_api }}
+
+configMaps:
+  admin-api:
+    enabled: true
+    data:
+      # Bearer auth: validate tokens issued by the identity server.
+      IdentityServer__Authority: "https://auth.{{ .Values.environment_hostname }}"
+
+      # --- Telemetry ---
+      Telemetry__Trace__Otlp__Endpoint: "{{ .Values.alloy_otlp_collector }}"
+      Telemetry__Log__Otlp__Endpoint: "{{ .Values.alloy_otlp_collector }}"
+      Telemetry__Metrics__Otlp__Endpoint: "{{ .Values.alloy_otlp_collector }}"
+      Telemetry__ServiceName: "Identity.Admin.Api.{{ title .Values.env_name }}"
+      Telemetry__ActivitySourceName: "Identity.Admin.Api.{{ title .Values.env_name }}.Activity"
+      Telemetry__MeterName: "Identity.Admin.Api.{{ title .Values.env_name }}.Meter"
+
+      # --- Logging ---
+      {{ if eq .Environment.Name "test" }}
+      Serilog__MinimumLevel__Default: "Information"
+      {{ else }}
+      Serilog__MinimumLevel__Default: "Warning"
+      {{ end }}
+
+route:
+  main:
+    hostnames:
+    - admin-api.auth.{{ .Values.environment_hostname }}
+
+vault:
+  environment: {{ .Environment.Name | quote }}

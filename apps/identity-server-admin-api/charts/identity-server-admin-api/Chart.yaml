@@ -1,0 +1,11 @@
+apiVersion: v2
+name: identity-server-admin-api
+description: Spydersoft Identity Admin REST API — manages clients, resources, and identity via the shared identity Postgres DB.
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
+
+dependencies:
+- name: common
+  version: 4.4.0
+  repository: https://bjw-s-labs.github.io/helm-charts

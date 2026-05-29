@@ -1,0 +1,11 @@
+apiVersion: v2
+name: identity-server-admin-ui
+description: Spydersoft Identity Admin UI — OidcProxy.Net BFF that serves the React SPA and reverse-proxies /api to the admin API.
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
+
+dependencies:
+- name: common
+  version: 4.4.0
+  repository: https://bjw-s-labs.github.io/helm-charts
