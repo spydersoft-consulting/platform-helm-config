@@ -1,6 +1,6 @@
 imageTags:
   audit_api: 0.1.0
-  audit_processor: 0.0.1-audit-infra.9
+  audit_processor: 0.1.0
   identity_admin_api: 3.1.5-admin-split.14
   identity_admin_frontend: 3.1.5-admin-split.14
   identity_server: 3.1.5-admin-split.14
