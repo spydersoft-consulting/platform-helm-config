@@ -1,0 +1,42 @@
+controllers:
+  filestore-api:
+    containers:
+      main:
+        image:
+          tag: {{ .Values.imageTags.filestore_api }}
+
+configMaps:
+  filestore-api:
+    enabled: true
+    data:
+      # --- Auth ---
+      Auth__Authority: "https://auth.{{ .Values.environment_hostname }}"
+      Auth__Audience: "filestore-api"
+
+      # --- Storage (S3-compatible) ---
+      Storage__ServiceUrl: "https://gs3.mattgerega.net"
+      Storage__BucketName: "filestore"
+      Storage__Region: "us-east-1"
+
+      # --- Telemetry ---
+      Telemetry__Trace__Otlp__Endpoint: "{{ .Values.alloy_otlp_collector }}"
+      Telemetry__Log__Otlp__Endpoint: "{{ .Values.alloy_otlp_collector }}"
+      Telemetry__Metrics__Otlp__Endpoint: "{{ .Values.alloy_otlp_collector }}"
+      Telemetry__ServiceName: "FileStore.{{ title .Values.env_name }}"
+      Telemetry__ActivitySourceName: "FileStore.{{ title .Values.env_name }}.Activity"
+      Telemetry__MeterName: "FileStore.{{ title .Values.env_name }}.Meter"
+
+      # --- Logging ---
+      {{ if eq .Environment.Name "test" }}
+      Serilog__MinimumLevel__Default: "Information"
+      {{ else }}
+      Serilog__MinimumLevel__Default: "Warning"
+      {{ end }}
+
+route:
+  filestore-api:
+    hostnames:
+    - filestore.{{ .Values.environment_hostname }}
+
+vault:
+  environment: {{ .Environment.Name | quote }}
