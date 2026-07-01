@@ -1,10 +1,7 @@
 imageTags:
   audit_api: 0.1.0
   audit_processor: 0.1.0
-<<<<<<< Updated upstream
-=======
   filestore_api: 0.1.0
   identity_admin_api: 3.1.4
   identity_admin_frontend: 3.1.4
->>>>>>> Stashed changes
   identity_server: 3.1.4
