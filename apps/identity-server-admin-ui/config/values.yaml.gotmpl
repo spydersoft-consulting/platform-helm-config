@@ -25,6 +25,9 @@ configMaps:
       Telemetry__ActivitySourceName: "Identity.Admin.Ui.{{ title .Values.env_name }}.Activity"
       Telemetry__MeterName: "Identity.Admin.Ui.{{ title .Values.env_name }}.Meter"
 
+      # --- Reverse proxy headers ---
+      ASPNETCORE_FORWARDEDHEADERS_ENABLED: "true"
+
       # --- Logging ---
       {{ if eq .Environment.Name "test" }}
       Serilog__MinimumLevel__Default: "Information"
