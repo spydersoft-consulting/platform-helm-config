@@ -1,0 +1,41 @@
+controllers:
+  main:
+    containers:
+      main:
+        image:
+          tag: {{ .Values.imageTags.identity_admin_frontend }}
+
+configMaps:
+  admin-ui:
+    enabled: true
+    data:
+      # --- OidcProxy.Net BFF: OIDC login against the identity server ---
+      OidcProxySettings__Oidc__Authority: "https://auth.{{ .Values.environment_hostname }}"
+      OidcProxySettings__Oidc__ClientId: "identity.admin.frontend"
+
+      # YARP reverse-proxy target for /api/** — the admin API service in this
+      # namespace (bjw-s names the single primary service after the release).
+      OidcProxySettings__ReverseProxy__Clusters__adminApi__Destinations__destination1__Address: "http://identity-server-admin-api/"
+
+      # --- Telemetry ---
+      Telemetry__Trace__Otlp__Endpoint: "{{ .Values.alloy_otlp_collector }}"
+      Telemetry__Log__Otlp__Endpoint: "{{ .Values.alloy_otlp_collector }}"
+      Telemetry__Metrics__Otlp__Endpoint: "{{ .Values.alloy_otlp_collector }}"
+      Telemetry__ServiceName: "Identity.Admin.Ui.{{ title .Values.env_name }}"
+      Telemetry__ActivitySourceName: "Identity.Admin.Ui.{{ title .Values.env_name }}.Activity"
+      Telemetry__MeterName: "Identity.Admin.Ui.{{ title .Values.env_name }}.Meter"
+
+      # --- Logging ---
+      {{ if eq .Environment.Name "test" }}
+      Serilog__MinimumLevel__Default: "Information"
+      {{ else }}
+      Serilog__MinimumLevel__Default: "Warning"
+      {{ end }}
+
+route:
+  main:
+    hostnames:
+    - admin.auth.{{ .Values.environment_hostname }}
+
+vault:
+  environment: {{ .Environment.Name | quote }}

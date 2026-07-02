@@ -25,6 +25,7 @@ configMaps:
       Telemetry__ActivitySourceName: "Identity.{{ title .Values.env_name }}.Activity"
       Telemetry__MeterName: "Identity.{{ title .Values.env_name }}.Meter"
       Telemetry__ServiceName: "Identity.{{ title .Values.env_name }}"
+      Resend__EmailFrom: "Spydersoft {{ title .Values.env_name }}"
       {{ end }}
 
       {{ if eq .Environment.Name "test"  }}

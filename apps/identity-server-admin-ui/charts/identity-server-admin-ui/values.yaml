@@ -1,0 +1,73 @@
+defaultPodOptions:
+  imagePullSecrets:
+    - name: cr-spydersoft-github
+
+controllers:
+  main:
+    enabled: true
+    type: deployment
+    replicas: 1
+    revisionHistoryLimit: 1
+    strategy: RollingUpdate
+    containers:
+      main:
+        image:
+          repository: ghcr.io/spyder007/identity_admin_frontend
+          pullPolicy: IfNotPresent
+        envFrom:
+          - configMapRef:
+              identifier: admin-ui
+          - secretRef:
+              name: identity-server-admin-ui-secrets
+        probes:
+          liveness:
+            enabled: true
+            custom: true
+            spec:
+              httpGet: { path: /livez, port: 8080 }
+              initialDelaySeconds: 10
+              periodSeconds: 10
+              timeoutSeconds: 1
+              failureThreshold: 3
+          readiness:
+            enabled: true
+            custom: true
+            spec:
+              httpGet: { path: /readyz, port: 8080 }
+              initialDelaySeconds: 5
+              periodSeconds: 10
+              timeoutSeconds: 1
+              failureThreshold: 3
+
+service:
+  main:
+    enabled: true
+    controller: main
+    nameOverride: main
+    primary: true
+    type: ClusterIP
+    ports:
+      http:
+        enabled: true
+        primary: true
+        port: 80
+        targetPort: 8080
+
+route:
+  main:
+    enabled: true
+    kind: HTTPRoute
+    parentRefs:
+      - name: main
+        namespace: envoy-gateway-system
+        group: gateway.networking.k8s.io
+        kind: Gateway
+    rules:
+      - matches:
+          - path: { type: PathPrefix, value: / }
+        backendRefs:
+          - identifier: main
+            port: 80
+
+vault:
+  environment: ""
