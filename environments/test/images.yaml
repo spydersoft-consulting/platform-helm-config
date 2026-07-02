@@ -2,6 +2,6 @@ imageTags:
   audit_api: 0.1.0
   audit_processor: 0.1.0
   filestore_api: 0.1.0
-  identity_admin_api: 3.1.5-admin-split.20
-  identity_admin_frontend: 3.1.5-admin-split.20
-  identity_server: 3.1.5-admin-split.20
+  identity_admin_api: 3.1.5-admin-split.21
+  identity_admin_frontend: 3.1.5-admin-split.21
+  identity_server: 3.1.5-admin-split.21
