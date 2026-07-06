@@ -23,18 +23,18 @@ controllers:
             enabled: true
             custom: true
             spec:
-              exec:
-                command: ["rabbitmq-diagnostics", "-q", "ping"]
+              tcpSocket:
+                port: 5672
               initialDelaySeconds: 30
               periodSeconds: 30
-              timeoutSeconds: 10
+              timeoutSeconds: 5
               failureThreshold: 3
           readiness:
             enabled: true
             custom: true
             spec:
-              exec:
-                command: ["rabbitmq-diagnostics", "-q", "check_port_connectivity"]
+              tcpSocket:
+                port: 5672
               initialDelaySeconds: 15
               periodSeconds: 10
               timeoutSeconds: 5
@@ -43,10 +43,10 @@ controllers:
             enabled: true
             custom: true
             spec:
-              exec:
-                command: ["rabbitmq-diagnostics", "-q", "check_running"]
+              tcpSocket:
+                port: 5672
               periodSeconds: 10
-              timeoutSeconds: 10
+              timeoutSeconds: 5
               failureThreshold: 30
 
 service:
