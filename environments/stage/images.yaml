@@ -1,4 +1,6 @@
 imageTags:
+  ? ''
+  : ''
   audit_api: 0.1.0
   audit_processor: 0.1.0
   filestore_api: 0.1.0
