@@ -4,11 +4,21 @@ controllers:
       main:
         image:
           tag: {{ .Values.imageTags.audit_processor }}
+        envFrom:
+          - secretRef:
+              name: audit-secrets
+          - configMapRef:
+              identifier: audit
   audit-api:
     containers:
       main:
         image:
           tag: {{ .Values.imageTags.audit_api }}
+        envFrom:
+          - secretRef:
+              name: audit-secrets
+          - configMapRef:
+              identifier: audit
 
 configMaps:
   audit:
@@ -45,5 +55,4 @@ route:
     hostnames:
     - audit.{{ .Values.environment_hostname }}
 
-vault:
-  environment: {{ .Environment.Name | quote }}
+env_name: {{ .Values.env_name }}

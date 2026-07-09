@@ -1,0 +1,19 @@
+apiVersion: v2
+# MUST stay distinct from the OCI chart's Chart.yaml `name:` (audit, published
+# from the audit app repo). helmfile's output-dir-template groups rendered
+# manifests by chart name, not release name -- two charts with the same
+# internal name in the same namespace silently overwrite each other's output
+# in the same git commit. See D:\spydersoft\plans\gitopsv2\helm-release-rename-runbook.md Pitfall A.
+name: audit-secrets
+description: Audit — Vault-backed app secrets (the app itself is published separately as the audit OCI chart)
+
+type: application
+
+version: 0.1.0
+
+appVersion: "0.0.0"
+
+dependencies:
+- name: common
+  version: 4.4.0
+  repository: https://bjw-s-labs.github.io/helm-charts

@@ -13,13 +13,19 @@ resources:
       endpoint: spydersoft-gh
       name: spydersoft-consulting/azure-devops-templates
 
+# Every build (beta or release) writes only to environments/test/images.yaml
+# -- see scripts/process-cicd.ps1. The stage/production promotions this
+# pipeline performs push their own commits (with [skip ci]) rather than
+# relying on a separate trigger, so this is the only path this pipeline
+# needs to watch.
 trigger:
   batch: true
   branches:
     include:
-    - main 
-    - feature/*
+    - main
   paths:
+    include:
+    - environments/test/*
     exclude:
     - README.md
     - scripts/*
@@ -27,8 +33,4 @@ trigger:
 pr: none
 
 extends:
-  ${{ if contains(variables['Build.SourceBranch'], 'main') }}:
-    template: release.yml
-  ${{ if not(contains(variables['Build.SourceBranch'], 'main')) }}:
-    template: feature.yml
-
+  template: deploy.yml

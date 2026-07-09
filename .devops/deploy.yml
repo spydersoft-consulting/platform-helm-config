@@ -1,0 +1,109 @@
+stages:
+# Every build (beta or release) writes to environments/test/images.yaml --
+# see scripts/process-cicd.ps1. This determines whether the version just
+# written is an unlabeled release (X.Y.Z) or a beta prerelease
+# (X.Y.Z-beta.<n>), and exposes that as a stage output variable so the
+# stage/production stages below can be skipped entirely (not just paused
+# on an approval that would never come) for beta builds.
+- stage: detect_version
+  displayName: Detect Release vs Beta
+  jobs:
+    - job: detect
+      pool:
+        name: Default
+      steps:
+        - checkout: self
+          clean: true
+        - script: |
+            if grep -qE "chart_version:\s*[0-9]+\.[0-9]+\.[0-9]+\s*$" environments/test/images.yaml; then
+              echo "##vso[task.setvariable variable=isRelease;isOutput=true]true"
+              echo "Release version detected in test -- stage/production will be offered once test deploys"
+            else
+              echo "##vso[task.setvariable variable=isRelease;isOutput=true]false"
+              echo "Beta/prerelease version in test -- stage/production will be skipped entirely"
+            fi
+          name: DetectVersion
+
+- template: stages/stages-generate-commit-manifests/v1.yml@templates
+  parameters:
+    environmentName: "test"
+    helmfileDirectory: ./
+    argoRepoName: ops_nonprod_cluster
+    argoBaseDir: apps/platform
+    helmfileVersion: "1.1.5"
+    pregenerateSteps:
+      - task: Docker@2
+        displayName: Login to Container Registry (for OCI chart pulls)
+        inputs:
+          command: login
+          containerRegistry: github-spydersoft-docker
+
+# Only queues for a release build (gated on detect_version's output, not on
+# which branch produced it). The stage Environment has an approval check
+# configured (see ops-automation's public-environment-approvals.tf) --
+# deploy_marker_stage pauses there before commit_changes_stage (the step
+# that actually triggers Argo to sync) is allowed to run.
+- template: stages/stages-generate-commit-manifests/v1.yml@templates
+  parameters:
+    environmentName: "stage"
+    helmfileDirectory: ./
+    argoRepoName: ops_nonprod_cluster
+    argoBaseDir: apps/platform
+    helmfileVersion: "1.1.5"
+    dependsOn:
+      - generate_commit_manifest_test
+      - detect_version
+    # dependencies (not stageDependencies -- that context is only valid
+    # inside a job's condition, not a stage's own condition) referencing
+    # detect_version's job/step output.
+    condition: and(succeeded(), eq(dependencies.detect_version.outputs['detect.DetectVersion.isRelease'], 'true'))
+    pregenerateSteps:
+      - task: Docker@2
+        displayName: Login to Container Registry (for OCI chart pulls)
+        inputs:
+          command: login
+          containerRegistry: github-spydersoft-docker
+      - script: |
+          git config --global user.email "gerega@gmail.com"
+          git config --global user.name "CI/CD User"
+          cd $(Build.SourcesDirectory)
+          git checkout main
+          git pull --rebase
+
+          cp environments/test/images.yaml environments/stage/images.yaml
+          git add environments/stage/images.yaml
+          git commit -m "Promote Test To Stage [skip ci]"
+          git push origin main
+        displayName: Promote Test Images to Stage
+
+# No explicit dependsOn/condition needed: Azure Pipelines' implicit default
+# (depends on the immediately preceding stage, condition succeeded()) is
+# exactly right here -- if stage was skipped (a beta build), a downstream
+# stage depending on it with the default succeeded() condition is skipped
+# too, automatically. The production Environment has its own approval
+# check, same mechanism as stage above.
+- template: stages/stages-generate-commit-manifests/v1.yml@templates
+  parameters:
+    environmentName: "production"
+    helmfileDirectory: ./
+    argoRepoName: ops_prod_cluster
+    argoBaseDir: apps/platform
+    helmfileVersion: "1.1.5"
+    pregenerateSteps:
+      - task: Docker@2
+        displayName: Login to Container Registry (for OCI chart pulls)
+        inputs:
+          command: login
+          containerRegistry: github-spydersoft-docker
+      - script: |
+          git config --global user.email "gerega@gmail.com"
+          git config --global user.name "CI/CD User"
+          cd $(Build.SourcesDirectory)
+          git checkout main
+          git pull --rebase
+
+          cp $(Build.SourcesDirectory)/environments/stage/images.yaml $(Build.SourcesDirectory)/environments/production/images.yaml -f
+          git add --all
+          git commit -m "Promote Stage To Production [skip ci]"
+          git push origin main
+        displayName: Copy Stage Images to Production

@@ -1,6 +1,23 @@
 releases:
-  - name: audit
+  # Vault-backed secrets consumed by the audit-app release below (audit-secrets
+  # Secret: RabbitMq creds + audit-mongo connection string). Kept as its own
+  # local chart, distinct Chart.yaml name from the OCI chart (see that
+  # chart's Chart.yaml comment) to avoid the manifest-collision pitfall
+  # documented in the helm-release-rename-runbook.
+  - name: audit-secrets
     chart: ./charts/{{`{{ .Release.Name }}`}}
+    namespace: "platform-{{ .Environment.Name }}"
+    missingFileHandler: Warn
+    values:
+    - config/secrets-values.yaml.gotmpl
+    - config/{{`{{ .Environment.Name }}`}}.yaml
+
+  # The app itself (audit-api + audit-processor), published as an OCI chart
+  # from the audit repo and versioned alongside its image tags. Consumes the
+  # shared platform mongodb/rabbitmq releases -- no dedicated backing store.
+  - name: audit-app
+    chart: oci://ghcr.io/spydersoft-consulting/charts/audit
+    version: "{{`{{ .Values.imageTags.chart_version }}`}}"
     namespace: "platform-{{ .Environment.Name }}"
     missingFileHandler: Warn
     values:
