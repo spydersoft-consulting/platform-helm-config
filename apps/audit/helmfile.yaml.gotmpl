@@ -3,13 +3,15 @@ releases:
   # Secret: RabbitMq creds + audit-mongo connection string). Kept as its own
   # local chart, distinct Chart.yaml name from the OCI chart (see that
   # chart's Chart.yaml comment) to avoid the manifest-collision pitfall
-  # documented in the helm-release-rename-runbook.
-  - name: audit-secrets
+  # documented in the helm-release-rename-runbook. Named audit-data (not
+  # audit-secrets) for consistency with pitstop-data/techradar-data -- same
+  # naming slot, in case this ever needs a PVC/backing store of its own.
+  - name: audit-data
     chart: ./charts/{{`{{ .Release.Name }}`}}
     namespace: "platform-{{ .Environment.Name }}"
     missingFileHandler: Warn
     values:
-    - config/secrets-values.yaml.gotmpl
+    - config/data-values.yaml.gotmpl
     - config/{{`{{ .Environment.Name }}`}}.yaml
 
   # The app itself (audit-api + audit-processor), published as an OCI chart

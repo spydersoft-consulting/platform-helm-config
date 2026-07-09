@@ -4,8 +4,8 @@ apiVersion: v2
 # manifests by chart name, not release name -- two charts with the same
 # internal name in the same namespace silently overwrite each other's output
 # in the same git commit. See D:\spydersoft\plans\gitopsv2\helm-release-rename-runbook.md Pitfall A.
-name: audit-secrets
-description: Audit — Vault-backed app secrets (the app itself is published separately as the audit OCI chart)
+name: audit-data
+description: Audit — Vault-backed app secrets (the app itself is published separately as the audit OCI chart). Named audit-data for consistency with pitstop-data/techradar-data, in case this ever grows a PVC/backing store of its own.
 
 type: application
 
