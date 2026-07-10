@@ -1,6 +1,23 @@
 releases:
-  - name: filestore-api
+  # Dedicated Postgres + Vault-backed secrets consumed by the filestore-app
+  # release below (filestore-secrets Secret: Postgres connection string +
+  # S3 credentials). Own instance, not shared with other apps -- kept as
+  # its own local chart, distinct Chart.yaml name from the OCI chart (see
+  # that chart's Chart.yaml comment) to avoid the manifest-collision
+  # pitfall documented in the helm-release-rename-runbook.
+  - name: filestore-data
     chart: ./charts/{{`{{ .Release.Name }}`}}
+    namespace: "platform-{{ .Environment.Name }}"
+    missingFileHandler: Warn
+    values:
+    - config/data-values.yaml.gotmpl
+    - config/{{`{{ .Environment.Name }}`}}.yaml
+
+  # The app itself (filestore-api controller), published as an OCI chart
+  # from the file-storage repo and versioned alongside its image tags.
+  - name: filestore-app
+    chart: oci://ghcr.io/spydersoft-consulting/charts/filestore-api
+    version: "{{`{{ .Values.imageTags.filestore_chart_version }}`}}"
     namespace: "platform-{{ .Environment.Name }}"
     missingFileHandler: Warn
     values:

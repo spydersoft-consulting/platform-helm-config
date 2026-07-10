@@ -19,7 +19,7 @@ releases:
   # shared platform mongodb/rabbitmq releases -- no dedicated backing store.
   - name: audit-app
     chart: oci://ghcr.io/spydersoft-consulting/charts/audit
-    version: "{{`{{ .Values.imageTags.chart_version }}`}}"
+    version: "{{`{{ .Values.imageTags.audit_chart_version }}`}}"
     namespace: "platform-{{ .Environment.Name }}"
     missingFileHandler: Warn
     values:

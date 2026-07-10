@@ -1,0 +1,92 @@
+defaultPodOptions:
+  imagePullSecrets:
+    - name: cr-spydersoft-github
+
+controllers:
+  main:
+    enabled: false
+  postgres:
+    enabled: true
+    forceRename: "{{ .Release.Name }}-postgres"
+    type: deployment
+    replicas: 1
+    revisionHistoryLimit: 1
+    strategy: Recreate
+    pod:
+      annotations:
+        linkerd.io/inject: disabled
+    containers:
+      main:
+        image:
+          repository: postgres
+          pullPolicy: IfNotPresent
+          tag: "17"
+        envFrom:
+          - secretRef:
+              name: postgres-secrets
+        env:
+          - name: POSTGRES_PORT
+            value: "5432"
+          - name: POSTGRES_HOST
+            value: postgres-service
+          - name: POSTGRES_DB
+            value: filestore
+
+service:
+  main:
+    enabled: false
+  postgres:
+    enabled: true
+    controller: postgres
+    forceRename: "{{ .Release.Name }}-postgres"
+    primary: false
+    type: ClusterIP
+    ports:
+      postgres:
+        enabled: true
+        port: 5432
+
+configMaps:
+  postgres-init-data:
+    enabled: true
+    data:
+      init-data.sh: |
+        #!/bin/bash
+        set -e;
+        if [ -n "${POSTGRES_NON_ROOT_USER:-}" ] && [ -n "${POSTGRES_NON_ROOT_PASSWORD:-}" ]; then
+          psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-EOSQL
+            CREATE USER "${POSTGRES_NON_ROOT_USER}" WITH PASSWORD '${POSTGRES_NON_ROOT_PASSWORD}';
+            GRANT ALL PRIVILEGES ON DATABASE ${POSTGRES_DB} TO "${POSTGRES_NON_ROOT_USER}";
+            ALTER DATABASE ${POSTGRES_DB} OWNER TO "${POSTGRES_NON_ROOT_USER}";
+        EOSQL
+        else
+          echo "SETUP INFO: No environment variables given!"
+        fi
+
+persistence:
+  postgres-init-data:
+    enabled: true
+    type: configMap
+    identifier: postgres-init-data
+    advancedMounts:
+      postgres:
+        main:
+          - path: /docker-entrypoint-initdb.d/init-filestore-user.sh
+            subPath: init-data.sh
+  postgres-data:
+    enabled: true
+    type: persistentVolumeClaim
+    storageClass: nfs-client
+    accessMode: ReadWriteMany
+    size: 10Gi
+    advancedMounts:
+      postgres:
+        main:
+          - path: /var/lib/postgresql/data
+
+route:
+  main:
+    enabled: false
+
+vault:
+  environment: ""

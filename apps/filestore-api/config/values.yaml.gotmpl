@@ -4,6 +4,11 @@ controllers:
       main:
         image:
           tag: {{ .Values.imageTags.filestore_api }}
+        envFrom:
+          - secretRef:
+              name: filestore-secrets
+          - configMapRef:
+              identifier: filestore-api
 
 configMaps:
   filestore-api:
@@ -38,5 +43,4 @@ route:
     hostnames:
     - filestore.{{ .Values.environment_hostname }}
 
-vault:
-  environment: {{ .Environment.Name | quote }}
+env_name: {{ .Values.env_name }}

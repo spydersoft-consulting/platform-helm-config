@@ -1,10 +1,16 @@
 stages:
-# Every build (beta or release) writes to environments/test/images.yaml --
-# see scripts/process-cicd.ps1. This determines whether the version just
-# written is an unlabeled release (X.Y.Z) or a beta prerelease
-# (X.Y.Z-beta.<n>), and exposes that as a stage output variable so the
-# stage/production stages below can be skipped entirely (not just paused
-# on an approval that would never come) for beta builds.
+# Every build (beta or release) writes to environments/test/images.yaml via
+# process-cicd.ps1, which commits with a "BETA - ..." or "RELEASE - ..."
+# message prefix depending on which branch (main vs. tag) produced it. This
+# checks that commit message directly rather than grepping images.yaml
+# content: platform-helm-config hosts multiple independently-versioned
+# OCI-chart apps (audit_chart_version, filestore_chart_version, ...) sharing
+# one flat imageTags map, so a whole-file content scan can't correctly tell
+# "is THIS build a release" once more than one app is in play -- one app's
+# already-released, permanently-unlabeled chart_version key would make a
+# content scan report isRelease=true forever, even for another app's beta
+# build. The triggering commit's own message is inherently scoped to
+# exactly the one build that caused this run.
 - stage: detect_version
   displayName: Detect Release vs Beta
   jobs:
@@ -12,15 +18,14 @@ stages:
       pool:
         name: Default
       steps:
-        - checkout: self
-          clean: true
         - script: |
-            if grep -qE "chart_version:\s*[0-9]+\.[0-9]+\.[0-9]+\s*$" environments/test/images.yaml; then
+            commitMessage="$(Build.SourceVersionMessage)"
+            if [[ "$commitMessage" == RELEASE* ]]; then
               echo "##vso[task.setvariable variable=isRelease;isOutput=true]true"
-              echo "Release version detected in test -- stage/production will be offered once test deploys"
+              echo "Release build detected ($commitMessage) -- stage/production will be offered once test deploys"
             else
               echo "##vso[task.setvariable variable=isRelease;isOutput=true]false"
-              echo "Beta/prerelease version in test -- stage/production will be skipped entirely"
+              echo "Beta/prerelease build detected ($commitMessage) -- stage/production will be skipped entirely"
             fi
           name: DetectVersion
 
