@@ -63,7 +63,7 @@ releases:
     - config/{{`{{ .Environment.Name }}`}}.yaml
     set:
     - name: controllers.postgres.replicas
-      value: {{ if has .Environment.Name (list) }}1{{ else }}0{{ end }}
+      value: {{ if has .Environment.Name (list "test") }}1{{ else }}0{{ end }}
     - name: renderSecrets
       value: {{ has .Environment.Name (list) }}
 
