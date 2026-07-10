@@ -2,8 +2,8 @@ imageTags:
   audit_api: 1.0.2-beta.1
   audit_chart_version: 1.0.2-beta.1
   audit_processor: 1.0.2-beta.1
-  filestore_api: 0.0.1-beta.12
-  filestore_chart_version: 0.0.1-beta.12
+  filestore_api: 0.0.1-beta.13
+  filestore_chart_version: 0.0.1-beta.13
   identity_admin_api: 3.1.5-admin-split.17
   identity_admin_frontend: 3.1.5-admin-split.17
   identity_server: 3.1.5-admin-split.17
