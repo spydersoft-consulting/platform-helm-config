@@ -23,7 +23,7 @@ controllers:
           tag: "17"
         envFrom:
           - secretRef:
-              name: postgres-secrets
+              name: filestore-postgres-secrets
         env:
           - name: POSTGRES_PORT
             value: "5432"
