@@ -1,7 +1,8 @@
 imageTags:
-  audit_api: 0.1.0
-  audit_processor: 0.1.0
+  audit_api: 1.0.1
+  audit_processor: 1.0.1
+  chart_version: 1.0.1
   filestore_api: 0.1.0
-  identity_admin_api: 3.1.4
-  identity_admin_frontend: 3.1.4
-  identity_server: 3.1.4
+  identity_admin_api: 3.1.5-admin-split.17
+  identity_admin_frontend: 3.1.5-admin-split.17
+  identity_server: 3.1.5-admin-split.17
