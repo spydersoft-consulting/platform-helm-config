@@ -29,10 +29,17 @@ $environment = "test"
 $commitMessagePrefix = if ($shortBranchName -eq "main") { "BETA" } else { "RELEASE" }
 
 Write-Host "Processing $branchName -> environment $environment"
-Invoke-Expression "git fetch"
+# fetch+hard-reset-to-origin instead of pull --rebase: this job's workspace
+# is reused across runs on self-hosted agents, and a prior run's leftover
+# rebase-merge state blocks every subsequent rebase attempt (confirmed live
+# via deploy.yml's promotion steps hitting this exact failure). This step
+# only ever needs the latest origin/main plus one new commit, not to
+# preserve any local history, so resetting to origin/main is both simpler
+# and self-healing against any stuck local state.
+Invoke-Expression "git rebase --abort" 2>$null
+Invoke-Expression "git fetch origin"
 Invoke-Expression "git checkout main"
-Invoke-Expression "git reset --hard"
-Invoke-Expression "git pull --rebase"
+Invoke-Expression "git reset --hard origin/main"
 $imageFile = "./environments/$environment/images.yaml"
 
 Write-Host "Replacing tags in $imageFile"

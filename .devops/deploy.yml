@@ -67,8 +67,19 @@ stages:
           git config --global user.email "gerega@gmail.com"
           git config --global user.name "CI/CD User"
           cd $(Build.SourcesDirectory)
+          # This job's workspace is reused across runs on self-hosted agents
+          # (no clean checkout between runs). A prior run's leftover
+          # rebase-merge state (from a conflict or a rejected push) blocks
+          # every subsequent run's rebase with "there is already a
+          # rebase-merge directory" -- confirmed live (builds 6192/6197).
+          # git pull --rebase is also the wrong tool here: this step only
+          # ever needs the latest origin/main plus one new commit, not to
+          # preserve any local history, so fetch+hard-reset is both simpler
+          # and self-healing against any stuck local state.
+          git rebase --abort 2>/dev/null || true
+          git fetch origin
           git checkout main
-          git pull --rebase
+          git reset --hard origin/main
 
           cp environments/test/images.yaml environments/stage/images.yaml
           git add environments/stage/images.yaml
@@ -99,8 +110,14 @@ stages:
           git config --global user.email "gerega@gmail.com"
           git config --global user.name "CI/CD User"
           cd $(Build.SourcesDirectory)
+          # See the matching comment in the stage promotion step above --
+          # fetch+hard-reset instead of pull --rebase, so this self-heals
+          # against any leftover rebase-merge state from a prior run on
+          # this self-hosted agent's reused workspace.
+          git rebase --abort 2>/dev/null || true
+          git fetch origin
           git checkout main
-          git pull --rebase
+          git reset --hard origin/main
 
           cp $(Build.SourcesDirectory)/environments/stage/images.yaml $(Build.SourcesDirectory)/environments/production/images.yaml -f
           git add --all
