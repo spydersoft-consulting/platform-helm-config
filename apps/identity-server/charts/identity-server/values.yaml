@@ -145,4 +145,10 @@ route:
       - identifier: main
         port: 80
 
-
+# Gates identity-server-secrets-es.yaml and postgres-secrets-es.yaml (literal,
+# non-release-derived names that would collide with identity-data's copies
+# once both releases exist side by side during the Postgres migration). See
+# D:\spydersoft\plans\gitopsv2\helm-release-rename-runbook.md step 3.
+# Default false (still rendering); flips true per environment only at actual
+# cutover time, together with identity-data's inverse renderSecrets flag.
+cutOver: false

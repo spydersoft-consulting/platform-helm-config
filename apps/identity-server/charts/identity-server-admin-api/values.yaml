@@ -12,13 +12,13 @@ controllers:
     containers:
       main:
         image:
-          repository: ghcr.io/spyder007/identity_admin_frontend
+          repository: ghcr.io/spyder007/identity_admin_api
           pullPolicy: IfNotPresent
         envFrom:
           - configMapRef:
-              identifier: admin-ui
+              identifier: admin-api
           - secretRef:
-              name: identity-server-admin-ui-secrets
+              name: identity-server-admin-api-secrets
         probes:
           liveness:
             enabled: true
@@ -71,3 +71,9 @@ route:
 
 vault:
   environment: ""
+
+# Gates identity-server-admin-api-secrets-es.yaml (literal, non-release-derived
+# name that would collide with identity-data's copy once both releases exist
+# side by side). Default false (still rendering); flips true per environment
+# only at actual cutover time.
+cutOver: false

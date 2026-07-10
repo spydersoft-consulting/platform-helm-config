@@ -9,14 +9,32 @@ controllers:
             identifier: identity
         - secretRef:
             name: identity-server-secrets
+  admin-api:
+    containers:
+      main:
+        image:
+          tag: {{ .Values.imageTags.identity_admin_api }}
+        envFrom:
+        - configMapRef:
+            identifier: admin-api
+        - secretRef:
+            name: identity-server-admin-api-secrets
+  admin-frontend:
+    containers:
+      main:
+        image:
+          tag: {{ .Values.imageTags.identity_admin_frontend }}
+        envFrom:
+        - configMapRef:
+            identifier: admin-ui
+        - secretRef:
+            name: identity-server-admin-ui-secrets
 
 configMaps:
   identity:
     enabled: true
     data:
-      Identity__AuthorityUrl : ""
-      Serilog__MinimumLevel__Default: "Warning"
-      Identity__AuthorityUrl : "https://auth.{{ .Values.environment_hostname }}"
+      Identity__AuthorityUrl: "https://auth.{{ .Values.environment_hostname }}"
       Telemetry__Trace__Otlp__Endpoint: "{{ .Values.alloy_otlp_collector}}"
       Telemetry__Log__Otlp__Endpoint: "{{ .Values.alloy_otlp_collector}}"
       Telemetry__Metrics__Otlp__Endpoint: "{{ .Values.alloy_otlp_collector}}"
@@ -39,18 +57,58 @@ configMaps:
       {{ if eq .Environment.Name "test"  }}
       AllowedOrigins__1: "http://localhost:3000"
       {{ end }}
+  admin-api:
+    enabled: true
+    data:
+      # Bearer auth: validate tokens issued by the identity server.
+      IdentityServer__Authority: "https://auth.{{ .Values.environment_hostname }}"
+
+      Telemetry__Trace__Otlp__Endpoint: "{{ .Values.alloy_otlp_collector }}"
+      Telemetry__Log__Otlp__Endpoint: "{{ .Values.alloy_otlp_collector }}"
+      Telemetry__Metrics__Otlp__Endpoint: "{{ .Values.alloy_otlp_collector }}"
+      Telemetry__ServiceName: "Identity.Admin.Api.{{ title .Values.env_name }}"
+      Telemetry__ActivitySourceName: "Identity.Admin.Api.{{ title .Values.env_name }}.Activity"
+      Telemetry__MeterName: "Identity.Admin.Api.{{ title .Values.env_name }}.Meter"
+
+      {{ if eq .Environment.Name "test" }}
+      Serilog__MinimumLevel__Default: "Information"
+      {{ else }}
+      Serilog__MinimumLevel__Default: "Warning"
+      {{ end }}
+  admin-ui:
+    enabled: true
+    data:
+      # --- OidcProxy.Net BFF: OIDC login against the identity server ---
+      OidcProxySettings__Oidc__Authority: "https://auth.{{ .Values.environment_hostname }}"
+      OidcProxySettings__Oidc__ClientId: "identity.admin.frontend"
+
+      # YARP reverse-proxy target for /api/** is defaulted by the chart
+      # itself (charts/identity/values.yaml, computed via the fullname
+      # helper) -- not set here, unlike the old per-release config which
+      # hardcoded "http://identity-server-admin-api/".
+
+      Telemetry__Trace__Otlp__Endpoint: "{{ .Values.alloy_otlp_collector }}"
+      Telemetry__Log__Otlp__Endpoint: "{{ .Values.alloy_otlp_collector }}"
+      Telemetry__Metrics__Otlp__Endpoint: "{{ .Values.alloy_otlp_collector }}"
+      Telemetry__ServiceName: "Identity.Admin.Ui.{{ title .Values.env_name }}"
+      Telemetry__ActivitySourceName: "Identity.Admin.Ui.{{ title .Values.env_name }}.Activity"
+      Telemetry__MeterName: "Identity.Admin.Ui.{{ title .Values.env_name }}.Meter"
+
+      {{ if eq .Environment.Name "test" }}
+      Serilog__MinimumLevel__Default: "Information"
+      {{ else }}
+      Serilog__MinimumLevel__Default: "Warning"
+      {{ end }}
 
 route:
   main:
     hostnames:
     - auth.{{ .Values.environment_hostname }}
+  admin-api:
+    hostnames:
+    - admin-api.auth.{{ .Values.environment_hostname }}
+  admin-frontend:
+    hostnames:
+    - admin.auth.{{ .Values.environment_hostname }}
 
-vault:
-  environment: {{ .Environment.Name | quote }} 
-
-redis:
-  {{ if eq .Environment.Name "production"  }}
-  environment: "production"
-  {{ else }}
-  environment: "nonproduction"
-  {{ end }}
+env_name: {{ .Values.env_name }}

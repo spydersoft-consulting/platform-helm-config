@@ -1,0 +1,109 @@
+defaultPodOptions:
+  imagePullSecrets:
+    - name: cr-spydersoft-github
+
+controllers:
+  main:
+    enabled: false
+  postgres:
+    enabled: true
+    forceRename: "{{ .Release.Name }}-postgres"
+    type: deployment
+    # Starts at 0 everywhere (overridden per-environment via helmfile's set:
+    # once that environment's data copy is ready to bring the new Postgres
+    # up) -- per the rename runbook, never let the new PVC's Postgres
+    # auto-init on an empty volume; the raw PGDATA copy happens while this
+    # stays at 0.
+    replicas: 0
+    revisionHistoryLimit: 1
+    strategy: Recreate
+    pod:
+      annotations:
+        linkerd.io/inject: disabled
+    containers:
+      main:
+        image:
+          repository: postgres
+          pullPolicy: IfNotPresent
+          tag: "17"
+        envFrom:
+          - secretRef:
+              name: postgres-secrets
+        env:
+          - name: POSTGRES_PORT
+            value: "5432"
+          - name: POSTGRES_HOST
+            value: postgres-service
+          - name: POSTGRES_DB
+            value: identity
+
+service:
+  main:
+    enabled: false
+  postgres:
+    enabled: true
+    controller: postgres
+    forceRename: "{{ .Release.Name }}-postgres"
+    primary: false
+    type: ClusterIP
+    ports:
+      postgres:
+        enabled: true
+        port: 5432
+
+configMaps:
+  postgres-init-data:
+    enabled: true
+    data:
+      init-data.sh: |
+        #!/bin/bash
+        set -e;
+        if [ -n "${POSTGRES_NON_ROOT_USER:-}" ] && [ -n "${POSTGRES_NON_ROOT_PASSWORD:-}" ]; then
+          psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-EOSQL
+            CREATE USER "${POSTGRES_NON_ROOT_USER}" WITH PASSWORD '${POSTGRES_NON_ROOT_PASSWORD}';
+            GRANT ALL PRIVILEGES ON DATABASE ${POSTGRES_DB} TO "${POSTGRES_NON_ROOT_USER}";
+            ALTER DATABASE ${POSTGRES_DB} OWNER TO "${POSTGRES_NON_ROOT_USER}";
+        EOSQL
+        else
+          echo "SETUP INFO: No environment variables given!"
+        fi
+
+persistence:
+  postgres-init-data:
+    enabled: true
+    type: configMap
+    identifier: postgres-init-data
+    advancedMounts:
+      postgres:
+        main:
+          - path: /docker-entrypoint-initdb.d/init-identity-user.sh
+            subPath: init-data.sh
+  postgres-data:
+    enabled: true
+    type: persistentVolumeClaim
+    storageClass: nfs-client
+    accessMode: ReadWriteMany
+    size: 300Gi
+    advancedMounts:
+      postgres:
+        main:
+          - path: /var/lib/postgresql/data
+
+route:
+  main:
+    enabled: false
+
+# Gates all four ExternalSecret templates (postgres-secrets-es and the three
+# app secrets) -- per the rename runbook, both the old identity-server
+# chart's identically-named literal secrets AND this new chart's copies
+# would otherwise fight over the same live objects if both rendered
+# unconditionally at once. Starts false everywhere; flips true per
+# environment only at actual cutover time, together with the old chart's
+# inverse cutOver flag.
+renderSecrets: false
+
+vault:
+  environment: ""
+
+redis:
+  environment: ""

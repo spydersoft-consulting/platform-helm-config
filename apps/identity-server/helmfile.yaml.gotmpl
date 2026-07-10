@@ -1,6 +1,78 @@
 releases:
+  # --- OLD releases (identity-server, identity-server-admin-api,
+  # identity-server-admin-ui) -- kept side by side with the new identity-data
+  # + identity-app releases below during the live Postgres migration. Never
+  # rename/replace in place; see the migration runbook
+  # (D:\spydersoft\plans\gitopsv2\helm-release-rename-runbook.md). `installed:`
+  # starts with every environment in it and shrinks as each one's migration
+  # completes; `cutOver` starts false everywhere and flips true (stopping
+  # this release's literal-named secrets from rendering) only once
+  # identity-data's Postgres has the copied data and is verified.
   - name: identity-server
+    installed: {{ has .Environment.Name (list "test" "stage" "production") }}
     chart: ./charts/{{`{{ .Release.Name }}`}}
+    namespace: "platform-{{ .Environment.Name }}"
+    missingFileHandler: Warn
+    values:
+    - config/old-identity-server-values.yaml.gotmpl
+    - config/{{`{{ .Environment.Name }}`}}.yaml
+    set:
+    - name: cutOver
+      value: {{ has .Environment.Name (list) }}
+
+  - name: identity-server-admin-api
+    installed: {{ has .Environment.Name (list "test" "stage" "production") }}
+    chart: ./charts/{{`{{ .Release.Name }}`}}
+    namespace: "platform-{{ .Environment.Name }}"
+    missingFileHandler: Warn
+    values:
+    - config/old-identity-server-admin-api-values.yaml.gotmpl
+    - config/{{`{{ .Environment.Name }}`}}.yaml
+    set:
+    - name: cutOver
+      value: {{ has .Environment.Name (list) }}
+
+  - name: identity-server-admin-ui
+    installed: {{ has .Environment.Name (list "test" "stage" "production") }}
+    chart: ./charts/{{`{{ .Release.Name }}`}}
+    namespace: "platform-{{ .Environment.Name }}"
+    missingFileHandler: Warn
+    values:
+    - config/old-identity-server-admin-ui-values.yaml.gotmpl
+    - config/{{`{{ .Environment.Name }}`}}.yaml
+    set:
+    - name: cutOver
+      value: {{ has .Environment.Name (list) }}
+
+  # --- NEW releases ---
+
+  # Dedicated Postgres + Vault-backed secrets for identity-server, admin-api,
+  # and admin-ui. Own instance, not shared with other apps. Distinct
+  # Chart.yaml name from the OCI chart (see that chart's Chart.yaml comment)
+  # to avoid the manifest-collision pitfall documented in the runbook.
+  # controllers.postgres.replicas starts at 0 everywhere (PVC-only stand-up,
+  # runbook step 4) and renderSecrets starts false everywhere (runbook step
+  # 3) -- both flip true per environment only once that environment's data
+  # copy is verified, together with the matching old release's cutOver flip.
+  - name: identity-data
+    chart: ./charts/{{`{{ .Release.Name }}`}}
+    namespace: "platform-{{ .Environment.Name }}"
+    missingFileHandler: Warn
+    values:
+    - config/data-values.yaml.gotmpl
+    - config/{{`{{ .Environment.Name }}`}}.yaml
+    set:
+    - name: controllers.postgres.replicas
+      value: {{ if has .Environment.Name (list) }}1{{ else }}0{{ end }}
+    - name: renderSecrets
+      value: {{ has .Environment.Name (list) }}
+
+  # The apps themselves (main identity-server + admin-api + admin-frontend),
+  # published as one OCI chart from the identity_server repo and versioned
+  # alongside their image tags.
+  - name: identity-app
+    chart: oci://ghcr.io/spydersoft-consulting/charts/identity
+    version: "{{`{{ .Values.imageTags.identity_chart_version }}`}}"
     namespace: "platform-{{ .Environment.Name }}"
     missingFileHandler: Warn
     values:
