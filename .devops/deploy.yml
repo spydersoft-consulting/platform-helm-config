@@ -1,6 +1,6 @@
 stages:
-# Every build (beta or release) writes to environments/test/images.yaml via
-# process-cicd.ps1, which commits with a "BETA - ..." or "RELEASE - ..."
+# Every automated build (beta or release) writes to environments/test/images.yaml
+# via process-cicd.ps1, which commits with a "BETA - ..." or "RELEASE - ..."
 # message prefix depending on which branch (main vs. tag) produced it. This
 # checks that commit message directly rather than grepping images.yaml
 # content: platform-helm-config hosts multiple independently-versioned
@@ -11,6 +11,20 @@ stages:
 # content scan report isRelease=true forever, even for another app's beta
 # build. The triggering commit's own message is inherently scoped to
 # exactly the one build that caused this run.
+#
+# A third case exists alongside BETA/RELEASE: a human pushing directly to
+# main with a hand-authored commit (e.g. flipping a helmfile.yaml.gotmpl
+# release-gate flag like cutOver/renderSecrets, not an image-tag bump).
+# Confirmed live: a config-only commit ("Cut identity over to the new
+# Postgres in stage") got silently skipped for stage/production because it
+# didn't match RELEASE* -- the isRelease gate conflated "should we advance
+# the image-promotion train" with "should stage/production's manifests be
+# regenerated at all", and only the former should ever cause a skip. BETA
+# builds still skip stage/production entirely (unwanted approval-request
+# spam for routine main-branch churn); RELEASE and manual builds both
+# deploy manifests to stage/production, but only RELEASE also promotes
+# images.yaml -- a manual commit's stage/production render reflects
+# whatever images.yaml already contains, unchanged.
 - stage: detect_version
   displayName: Detect Release vs Beta
   jobs:
@@ -21,12 +35,16 @@ stages:
         - script: |
             commitMessage="$(Build.SourceVersionMessage)"
             if [[ "$commitMessage" == RELEASE* ]]; then
-              echo "##vso[task.setvariable variable=isRelease;isOutput=true]true"
-              echo "Release build detected ($commitMessage) -- stage/production will be offered once test deploys"
-            else
-              echo "##vso[task.setvariable variable=isRelease;isOutput=true]false"
+              buildKind=release
+              echo "Release build detected ($commitMessage) -- stage/production will be offered once test deploys, images.yaml will be promoted"
+            elif [[ "$commitMessage" == BETA* ]]; then
+              buildKind=beta
               echo "Beta/prerelease build detected ($commitMessage) -- stage/production will be skipped entirely"
+            else
+              buildKind=manual
+              echo "Manual commit detected ($commitMessage) -- stage/production will be offered once test deploys, images.yaml will NOT be promoted"
             fi
+            echo "##vso[task.setvariable variable=buildKind;isOutput=true]$buildKind"
           name: DetectVersion
 
 - template: stages/stages-generate-commit-manifests/v1.yml@templates
@@ -43,11 +61,14 @@ stages:
           command: login
           containerRegistry: github-spydersoft-docker
 
-# Only queues for a release build (gated on detect_version's output, not on
-# which branch produced it). The stage Environment has an approval check
-# configured (see ops-automation's public-environment-approvals.tf) --
-# deploy_marker_stage pauses there before commit_changes_stage (the step
-# that actually triggers Argo to sync) is allowed to run.
+# Queues for release AND manual builds (skips only beta), gated on
+# detect_version's output rather than which branch produced it. The stage
+# Environment has an approval check configured (see ops-automation's
+# public-environment-approvals.tf) -- deploy_marker_stage pauses there
+# before commit_changes_stage (the step that actually triggers Argo to
+# sync) is allowed to run. The image-promotion step below runs only for
+# release builds -- a manual build renders/commits stage's manifests from
+# whatever images.yaml already contains, unchanged.
 - template: stages/stages-generate-commit-manifests/v1.yml@templates
   parameters:
     environmentName: "stage"
@@ -61,7 +82,7 @@ stages:
     # dependencies (not stageDependencies -- that context is only valid
     # inside a job's condition, not a stage's own condition) referencing
     # detect_version's job/step output.
-    condition: and(succeeded(), eq(dependencies.detect_version.outputs['detect.DetectVersion.isRelease'], 'true'))
+    condition: and(succeeded(), ne(dependencies.detect_version.outputs['detect.DetectVersion.buildKind'], 'beta'))
     pregenerateSteps:
       - task: Docker@2
         displayName: Login to Container Registry (for OCI chart pulls)
@@ -90,6 +111,9 @@ stages:
           git add environments/stage/images.yaml
           git commit -m "Promote Test To Stage [skip ci]"
           git push origin main
+        # Only a release build should advance the image-promotion train --
+        # a manual (config-only) commit deploys stage/production as-is.
+        condition: eq(stageDependencies.detect_version.detect.outputs['DetectVersion.buildKind'], 'release')
         displayName: Promote Test Images to Stage
 
 # No explicit dependsOn/condition needed: Azure Pipelines' implicit default
@@ -128,4 +152,7 @@ stages:
           git add --all
           git commit -m "Promote Stage To Production [skip ci]"
           git push origin main
+        # Only a release build should advance the image-promotion train --
+        # a manual (config-only) commit deploys production as-is.
+        condition: eq(stageDependencies.detect_version.detect.outputs['DetectVersion.buildKind'], 'release')
         displayName: Copy Stage Images to Production
