@@ -90,6 +90,20 @@ stages:
           command: login
           containerRegistry: github-spydersoft-docker
       - script: |
+          # Only a release build should advance the image-promotion train --
+          # a manual (config-only) commit deploys stage as-is. Checked here
+          # via the commit message directly (a normal predefined variable
+          # available in every job) rather than a cross-stage condition:
+          # stageDependencies is not a recognized context for a step-level
+          # condition -- confirmed live (build 6242 failed with
+          # "Unrecognized value: 'stageDependencies'" at job-init time,
+          # before the script even ran).
+          commitMessage="$(Build.SourceVersionMessage)"
+          if [[ "$commitMessage" != RELEASE* ]]; then
+            echo "Not a release build ($commitMessage) -- skipping image promotion"
+            exit 0
+          fi
+
           git config --global user.email "gerega@gmail.com"
           git config --global user.name "CI/CD User"
           cd $(Build.SourcesDirectory)
@@ -111,9 +125,6 @@ stages:
           git add environments/stage/images.yaml
           git commit -m "Promote Test To Stage [skip ci]"
           git push origin main
-        # Only a release build should advance the image-promotion train --
-        # a manual (config-only) commit deploys stage/production as-is.
-        condition: eq(stageDependencies.detect_version.detect.outputs['DetectVersion.buildKind'], 'release')
         displayName: Promote Test Images to Stage
 
 # No explicit dependsOn/condition needed: Azure Pipelines' implicit default
@@ -136,6 +147,15 @@ stages:
           command: login
           containerRegistry: github-spydersoft-docker
       - script: |
+          # See the matching comment in the stage promotion step above --
+          # checked via the commit message directly, not a cross-stage
+          # condition (stageDependencies is not valid in a step condition).
+          commitMessage="$(Build.SourceVersionMessage)"
+          if [[ "$commitMessage" != RELEASE* ]]; then
+            echo "Not a release build ($commitMessage) -- skipping image promotion"
+            exit 0
+          fi
+
           git config --global user.email "gerega@gmail.com"
           git config --global user.name "CI/CD User"
           cd $(Build.SourcesDirectory)
@@ -152,7 +172,4 @@ stages:
           git add --all
           git commit -m "Promote Stage To Production [skip ci]"
           git push origin main
-        # Only a release build should advance the image-promotion train --
-        # a manual (config-only) commit deploys production as-is.
-        condition: eq(stageDependencies.detect_version.detect.outputs['DetectVersion.buildKind'], 'release')
         displayName: Copy Stage Images to Production
