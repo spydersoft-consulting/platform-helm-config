@@ -28,9 +28,9 @@ releases:
     - config/{{`{{ .Environment.Name }}`}}.yaml
     set:
     - name: cutOver
-      value: {{ has .Environment.Name (list "test") }}
+      value: {{ has .Environment.Name (list "test" "stage") }}
     - name: route.main.enabled
-      value: {{ not (has .Environment.Name (list "test")) }}
+      value: {{ not (has .Environment.Name (list "test" "stage")) }}
 
   - name: identity-server-admin-api
     installed: {{ has .Environment.Name (list "stage" "production") }}
@@ -42,9 +42,9 @@ releases:
     - config/{{`{{ .Environment.Name }}`}}.yaml
     set:
     - name: cutOver
-      value: {{ has .Environment.Name (list "test") }}
+      value: {{ has .Environment.Name (list "test" "stage") }}
     - name: route.main.enabled
-      value: {{ not (has .Environment.Name (list "test")) }}
+      value: {{ not (has .Environment.Name (list "test" "stage")) }}
 
   - name: identity-server-admin-ui
     installed: {{ has .Environment.Name (list "stage" "production") }}
@@ -56,9 +56,9 @@ releases:
     - config/{{`{{ .Environment.Name }}`}}.yaml
     set:
     - name: cutOver
-      value: {{ has .Environment.Name (list "test") }}
+      value: {{ has .Environment.Name (list "test" "stage") }}
     - name: route.main.enabled
-      value: {{ not (has .Environment.Name (list "test")) }}
+      value: {{ not (has .Environment.Name (list "test" "stage")) }}
 
   # --- NEW releases ---
 
@@ -79,9 +79,9 @@ releases:
     - config/{{`{{ .Environment.Name }}`}}.yaml
     set:
     - name: controllers.postgres.replicas
-      value: {{ if has .Environment.Name (list "test") }}1{{ else }}0{{ end }}
+      value: {{ if has .Environment.Name (list "test" "stage") }}1{{ else }}0{{ end }}
     - name: renderSecrets
-      value: {{ has .Environment.Name (list "test") }}
+      value: {{ has .Environment.Name (list "test" "stage") }}
 
   # The apps themselves (main identity-server + admin-api + admin-frontend),
   # published as one OCI chart from the identity_server repo and versioned
