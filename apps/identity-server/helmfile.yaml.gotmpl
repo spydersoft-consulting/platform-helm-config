@@ -19,7 +19,7 @@ releases:
   # gated literal-named Secrets (per the rename runbook); routes needed
   # the same treatment and were missed initially.
   - name: identity-server
-    installed: {{ has .Environment.Name (list "production") }}
+    installed: {{ has .Environment.Name (list) }}
     chart: ./charts/{{`{{ .Release.Name }}`}}
     namespace: "platform-{{ .Environment.Name }}"
     missingFileHandler: Warn
@@ -33,7 +33,7 @@ releases:
       value: {{ not (has .Environment.Name (list "test" "stage" "production")) }}
 
   - name: identity-server-admin-api
-    installed: {{ has .Environment.Name (list "production") }}
+    installed: {{ has .Environment.Name (list) }}
     chart: ./charts/{{`{{ .Release.Name }}`}}
     namespace: "platform-{{ .Environment.Name }}"
     missingFileHandler: Warn
@@ -47,7 +47,7 @@ releases:
       value: {{ not (has .Environment.Name (list "test" "stage" "production")) }}
 
   - name: identity-server-admin-ui
-    installed: {{ has .Environment.Name (list "production") }}
+    installed: {{ has .Environment.Name (list) }}
     chart: ./charts/{{`{{ .Release.Name }}`}}
     namespace: "platform-{{ .Environment.Name }}"
     missingFileHandler: Warn
