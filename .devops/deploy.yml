@@ -121,7 +121,29 @@ stages:
           git checkout main
           git reset --hard origin/main
 
-          cp environments/test/images.yaml environments/stage/images.yaml
+          # Promote only the keys THIS release actually changed in
+          # test/images.yaml -- not the whole file. A whole-file cp
+          # confirmed live to drag other apps' unrelated in-flight betas
+          # into stage's desired manifest: an identity release blindly
+          # copied audit_api: 1.0.2-beta.1 (audit's own in-progress test
+          # build, nothing to do with identity) into stage, sitting there
+          # undetected until the next audit sync would have deployed a
+          # beta image to stage. $(Build.SourceVersion) is this whole
+          # pipeline run's fixed triggering commit -- diffing it against
+          # its own parent gives exactly the key set this build's
+          # process-cicd.ps1 run touched, stable regardless of how many
+          # commits (including this promotion's own) land afterward.
+          CHANGED_KEYS=$(git diff $(Build.SourceVersion)~1 $(Build.SourceVersion) -- environments/test/images.yaml | grep -E '^\+  [a-zA-Z0-9_]+:' | sed -E 's/^\+  ([a-zA-Z0-9_]+):.*/\1/' | sort -u)
+          echo "Promoting changed keys: $CHANGED_KEYS"
+          for KEY in $CHANGED_KEYS; do
+            VALUE=$(grep -E "^  ${KEY}:" environments/test/images.yaml | sed -E "s/^  ${KEY}: *//")
+            if grep -qE "^  ${KEY}:" environments/stage/images.yaml; then
+              sed -i -E "s|^  ${KEY}:.*|  ${KEY}: ${VALUE}|" environments/stage/images.yaml
+            else
+              echo "  ${KEY}: ${VALUE}" >> environments/stage/images.yaml
+            fi
+          done
+
           git add environments/stage/images.yaml
           git commit -m "Promote Test To Stage [skip ci]"
           git push origin main
@@ -168,8 +190,25 @@ stages:
           git checkout main
           git reset --hard origin/main
 
-          cp $(Build.SourcesDirectory)/environments/stage/images.yaml $(Build.SourcesDirectory)/environments/production/images.yaml -f
-          git add --all
+          # See the matching comment in the stage promotion step above --
+          # same fix, same reasoning. $(Build.SourceVersion) is still this
+          # whole pipeline run's original triggering commit here (fixed
+          # for the run, unaffected by the stage-promotion commit that
+          # already landed on main by this point), so the same diff
+          # identifies the same key set; values are read from stage's
+          # image.yaml (already promoted) rather than test's.
+          CHANGED_KEYS=$(git diff $(Build.SourceVersion)~1 $(Build.SourceVersion) -- environments/test/images.yaml | grep -E '^\+  [a-zA-Z0-9_]+:' | sed -E 's/^\+  ([a-zA-Z0-9_]+):.*/\1/' | sort -u)
+          echo "Promoting changed keys: $CHANGED_KEYS"
+          for KEY in $CHANGED_KEYS; do
+            VALUE=$(grep -E "^  ${KEY}:" environments/stage/images.yaml | sed -E "s/^  ${KEY}: *//")
+            if grep -qE "^  ${KEY}:" environments/production/images.yaml; then
+              sed -i -E "s|^  ${KEY}:.*|  ${KEY}: ${VALUE}|" environments/production/images.yaml
+            else
+              echo "  ${KEY}: ${VALUE}" >> environments/production/images.yaml
+            fi
+          done
+
+          git add environments/production/images.yaml
           git commit -m "Promote Stage To Production [skip ci]"
           git push origin main
         displayName: Copy Stage Images to Production
