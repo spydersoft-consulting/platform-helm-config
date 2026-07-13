@@ -106,9 +106,9 @@ route:
     - auth.{{ .Values.environment_hostname }}
   admin-api:
     hostnames:
-    - admin-api.auth.{{ .Values.environment_hostname }}
+    - auth-admin-api.{{ .Values.environment_hostname }}
   admin-frontend:
     hostnames:
-    - admin.auth.{{ .Values.environment_hostname }}
+    - auth-admin.{{ .Values.environment_hostname }}
 
 env_name: {{ .Values.env_name }}
