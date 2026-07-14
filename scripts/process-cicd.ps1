@@ -19,12 +19,11 @@ $shortBranchName = $branchName.Replace("refs/heads/", "")
 # Both build shapes -- a push to the app repo's main branch (a beta build,
 # GitVersion tags X.Y.Z-beta.<n>) and a tag push (a release build, an
 # unlabeled X.Y.Z) -- always update environments/test/images.yaml. Nothing
-# ever writes to stage/production directly from here. Promotion onward
-# (test -> stage, gated on the version actually being an unlabeled
-# release; then stage -> production, unconditional) happens in
-# deploy.yml, based on what's actually in test/images.yaml once it's
-# committed, not on which branch produced it -- that keeps the promotion
-# decision declarative and independent of this script.
+# ever writes to production directly from here. Promotion onward (test ->
+# production, gated on the version actually being an unlabeled release)
+# happens in deploy.yml, based on what's actually in test/images.yaml once
+# it's committed, not on which branch produced it -- that keeps the
+# promotion decision declarative and independent of this script.
 $environment = "test"
 $commitMessagePrefix = if ($shortBranchName -eq "main") { "BETA" } else { "RELEASE" }
 

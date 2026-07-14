@@ -61,19 +61,17 @@ stages:
           command: login
           containerRegistry: github-spydersoft-docker
 
-# Queues for release AND manual builds (skips only beta), gated on
-# detect_version's output rather than which branch produced it. The stage
-# Environment has an approval check configured (see ops-automation's
-# public-environment-approvals.tf) -- deploy_marker_stage pauses there
-# before commit_changes_stage (the step that actually triggers Argo to
-# sync) is allowed to run. The image-promotion step below runs only for
-# release builds -- a manual build renders/commits stage's manifests from
-# whatever images.yaml already contains, unchanged.
+# stage was removed (2026-07): test and stage ran as full duplicate
+# stacks (audit, identity-server, mongodb, rabbitmq) on a homelab
+# cluster with no real pre-prod/staging need, so this promotion train
+# now goes straight from test to production. Explicit dependsOn/condition
+# below reproduce what stage used to gate (skip only beta builds) since
+# production no longer has a preceding stage to inherit succeeded() from.
 - template: stages/stages-generate-commit-manifests/v1.yml@templates
   parameters:
-    environmentName: "stage"
+    environmentName: "production"
     helmfileDirectory: ./
-    argoRepoName: ops_nonprod_cluster
+    argoRepoName: ops_prod_cluster
     argoBaseDir: apps/platform
     helmfileVersion: "1.1.5"
     dependsOn:
@@ -91,11 +89,11 @@ stages:
           containerRegistry: github-spydersoft-docker
       - script: |
           # Only a release build should advance the image-promotion train --
-          # a manual (config-only) commit deploys stage as-is. Checked here
-          # via the commit message directly (a normal predefined variable
-          # available in every job) rather than a cross-stage condition:
-          # stageDependencies is not a recognized context for a step-level
-          # condition -- confirmed live (build 6242 failed with
+          # a manual (config-only) commit deploys production as-is. Checked
+          # here via the commit message directly (a normal predefined
+          # variable available in every job) rather than a cross-stage
+          # condition: stageDependencies is not a recognized context for a
+          # step-level condition -- confirmed live (build 6242 failed with
           # "Unrecognized value: 'stageDependencies'" at job-init time,
           # before the script even ran).
           commitMessage="$(Build.SourceVersionMessage)"
@@ -124,11 +122,11 @@ stages:
           # Promote only the keys THIS release actually changed in
           # test/images.yaml -- not the whole file. A whole-file cp
           # confirmed live to drag other apps' unrelated in-flight betas
-          # into stage's desired manifest: an identity release blindly
+          # into production's desired manifest: an identity release blindly
           # copied audit_api: 1.0.2-beta.1 (audit's own in-progress test
-          # build, nothing to do with identity) into stage, sitting there
-          # undetected until the next audit sync would have deployed a
-          # beta image to stage. $(Build.SourceVersion) is this whole
+          # build, nothing to do with identity) into production, sitting
+          # there undetected until the next audit sync would have deployed a
+          # beta image to production. $(Build.SourceVersion) is this whole
           # pipeline run's fixed triggering commit -- diffing it against
           # its own parent gives exactly the key set this build's
           # process-cicd.ps1 run touched, stable regardless of how many
@@ -137,70 +135,6 @@ stages:
           echo "Promoting changed keys: $CHANGED_KEYS"
           for KEY in $CHANGED_KEYS; do
             VALUE=$(grep -E "^  ${KEY}:" environments/test/images.yaml | sed -E "s/^  ${KEY}: *//")
-            if grep -qE "^  ${KEY}:" environments/stage/images.yaml; then
-              sed -i -E "s|^  ${KEY}:.*|  ${KEY}: ${VALUE}|" environments/stage/images.yaml
-            else
-              echo "  ${KEY}: ${VALUE}" >> environments/stage/images.yaml
-            fi
-          done
-
-          git add environments/stage/images.yaml
-          git commit -m "Promote Test To Stage [skip ci]"
-          git push origin main
-        displayName: Promote Test Images to Stage
-
-# No explicit dependsOn/condition needed: Azure Pipelines' implicit default
-# (depends on the immediately preceding stage, condition succeeded()) is
-# exactly right here -- if stage was skipped (a beta build), a downstream
-# stage depending on it with the default succeeded() condition is skipped
-# too, automatically. The production Environment has its own approval
-# check, same mechanism as stage above.
-- template: stages/stages-generate-commit-manifests/v1.yml@templates
-  parameters:
-    environmentName: "production"
-    helmfileDirectory: ./
-    argoRepoName: ops_prod_cluster
-    argoBaseDir: apps/platform
-    helmfileVersion: "1.1.5"
-    pregenerateSteps:
-      - task: Docker@2
-        displayName: Login to Container Registry (for OCI chart pulls)
-        inputs:
-          command: login
-          containerRegistry: github-spydersoft-docker
-      - script: |
-          # See the matching comment in the stage promotion step above --
-          # checked via the commit message directly, not a cross-stage
-          # condition (stageDependencies is not valid in a step condition).
-          commitMessage="$(Build.SourceVersionMessage)"
-          if [[ "$commitMessage" != RELEASE* ]]; then
-            echo "Not a release build ($commitMessage) -- skipping image promotion"
-            exit 0
-          fi
-
-          git config --global user.email "gerega@gmail.com"
-          git config --global user.name "CI/CD User"
-          cd $(Build.SourcesDirectory)
-          # See the matching comment in the stage promotion step above --
-          # fetch+hard-reset instead of pull --rebase, so this self-heals
-          # against any leftover rebase-merge state from a prior run on
-          # this self-hosted agent's reused workspace.
-          git rebase --abort 2>/dev/null || true
-          git fetch origin
-          git checkout main
-          git reset --hard origin/main
-
-          # See the matching comment in the stage promotion step above --
-          # same fix, same reasoning. $(Build.SourceVersion) is still this
-          # whole pipeline run's original triggering commit here (fixed
-          # for the run, unaffected by the stage-promotion commit that
-          # already landed on main by this point), so the same diff
-          # identifies the same key set; values are read from stage's
-          # image.yaml (already promoted) rather than test's.
-          CHANGED_KEYS=$(git diff $(Build.SourceVersion)~1 $(Build.SourceVersion) -- environments/test/images.yaml | grep -E '^\+  [a-zA-Z0-9_]+:' | sed -E 's/^\+  ([a-zA-Z0-9_]+):.*/\1/' | sort -u)
-          echo "Promoting changed keys: $CHANGED_KEYS"
-          for KEY in $CHANGED_KEYS; do
-            VALUE=$(grep -E "^  ${KEY}:" environments/stage/images.yaml | sed -E "s/^  ${KEY}: *//")
             if grep -qE "^  ${KEY}:" environments/production/images.yaml; then
               sed -i -E "s|^  ${KEY}:.*|  ${KEY}: ${VALUE}|" environments/production/images.yaml
             else
@@ -209,6 +143,6 @@ stages:
           done
 
           git add environments/production/images.yaml
-          git commit -m "Promote Stage To Production [skip ci]"
+          git commit -m "Promote Test To Production [skip ci]"
           git push origin main
-        displayName: Copy Stage Images to Production
+        displayName: Copy Test Images to Production
