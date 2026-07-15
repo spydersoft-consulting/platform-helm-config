@@ -4,7 +4,7 @@ imageTags:
   audit_processor: 1.0.1
   filestore_api: 1.0.0
   filestore_chart_version: 1.0.0
-  identity_admin_api: 3.1.5
-  identity_admin_frontend: 3.1.5
-  identity_chart_version: 3.1.5
-  identity_server: 3.1.5
+  identity_admin_api: 3.1.6-beta.3
+  identity_admin_frontend: 3.1.6-beta.3
+  identity_chart_version: 3.1.6-beta.3
+  identity_server: 3.1.6-beta.3
