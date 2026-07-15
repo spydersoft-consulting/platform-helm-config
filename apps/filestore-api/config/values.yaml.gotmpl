@@ -9,6 +9,9 @@ controllers:
               name: filestore-secrets
           - configMapRef:
               identifier: filestore-api
+        resources:
+          requests:
+            cpu: 5m
 
 configMaps:
   filestore-api:
