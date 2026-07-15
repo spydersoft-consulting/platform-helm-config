@@ -9,6 +9,9 @@ controllers:
             identifier: identity
         - secretRef:
             name: identity-server-secrets
+        resources:
+          requests:
+            cpu: 5m
   admin-api:
     containers:
       main:
@@ -19,6 +22,9 @@ controllers:
             identifier: admin-api
         - secretRef:
             name: identity-server-admin-api-secrets
+        resources:
+          requests:
+            cpu: 5m
   admin-frontend:
     containers:
       main:
@@ -29,6 +35,9 @@ controllers:
             identifier: admin-ui
         - secretRef:
             name: identity-server-admin-ui-secrets
+        resources:
+          requests:
+            cpu: 5m
 
 configMaps:
   identity:

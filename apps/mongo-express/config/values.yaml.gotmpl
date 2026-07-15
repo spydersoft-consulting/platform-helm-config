@@ -1,2 +1,10 @@
 vault:
   environment: {{ .Environment.Name | quote }}
+
+controllers:
+  main:
+    containers:
+      main:
+        resources:
+          requests:
+            cpu: 5m

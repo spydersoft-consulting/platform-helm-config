@@ -1,6 +1,14 @@
 vault:
   environment: {{ .Environment.Name | quote }}
 
+controllers:
+  main:
+    containers:
+      main:
+        resources:
+          requests:
+            cpu: {{ if eq .Environment.Name "production" }}15m{{ else }}10m{{ end }}
+
 {{ if eq .Environment.Name "test" }}
 route:
   main:

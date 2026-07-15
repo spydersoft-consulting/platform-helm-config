@@ -9,6 +9,9 @@ controllers:
               name: audit-secrets
           - configMapRef:
               identifier: audit
+        resources:
+          requests:
+            cpu: 5m
   audit-api:
     containers:
       main:
@@ -19,6 +22,9 @@ controllers:
               name: audit-secrets
           - configMapRef:
               identifier: audit
+        resources:
+          requests:
+            cpu: 5m
 
 configMaps:
   audit:

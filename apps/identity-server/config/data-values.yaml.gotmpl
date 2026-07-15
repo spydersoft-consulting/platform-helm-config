@@ -1,6 +1,14 @@
 vault:
   environment: {{ .Environment.Name | quote }}
 
+controllers:
+  postgres:
+    containers:
+      main:
+        resources:
+          requests:
+            cpu: 5m
+
 redis:
   {{ if eq .Environment.Name "production" }}
   environment: "production"
