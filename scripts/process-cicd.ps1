@@ -14,18 +14,22 @@ param (
 
 $tags = $tagsCollection.Split(",")
 
-$shortBranchName = $branchName.Replace("refs/heads/", "")
-
-# Both build shapes -- a push to the app repo's main branch (a beta build,
-# GitVersion tags X.Y.Z-beta.<n>) and a tag push (a release build, an
-# unlabeled X.Y.Z) -- always update environments/test/images.yaml. Nothing
-# ever writes to production directly from here. Promotion onward (test ->
-# production, gated on the version actually being an unlabeled release)
-# happens in deploy.yml, based on what's actually in test/images.yaml once
-# it's committed, not on which branch produced it -- that keeps the
-# promotion decision declarative and independent of this script.
+# Every build shape (main-branch push, feature-branch push, or tag push)
+# always updates environments/test/images.yaml. Nothing ever writes to
+# production directly from here. Promotion onward (test -> production,
+# gated on the tag actually being an unlabeled release) happens in
+# deploy.yml, based on this commit's BETA/RELEASE prefix below -- that
+# keeps the promotion decision declarative and independent of this script.
 $environment = "test"
-$commitMessagePrefix = if ($shortBranchName -eq "main") { "BETA" } else { "RELEASE" }
+# Classify by the actual tag value, not by branch: GitVersion emits a clean
+# X.Y.Z for real releases and an X.Y.Z-something prerelease for everything
+# else. Branch name only approximates this and mislabels feature-branch
+# prerelease builds (e.g. tag 3.1.6-terraform-provider-api-fixes.3, pushed
+# from a branch other than main) as RELEASE, which then gets promoted
+# straight to production by deploy.yml. Semver's hyphen marks a prerelease
+# unambiguously regardless of which branch produced it.
+$isPrerelease = $tags | Where-Object { $_.Contains("=") -and $_.Split("=")[1].Contains("-") } | Select-Object -First 1
+$commitMessagePrefix = if ($isPrerelease) { "BETA" } else { "RELEASE" }
 
 Write-Host "Processing $branchName -> environment $environment"
 # fetch+hard-reset-to-origin instead of pull --rebase: this job's workspace

@@ -1,7 +1,8 @@
 stages:
 # Every automated build (beta or release) writes to environments/test/images.yaml
 # via process-cicd.ps1, which commits with a "BETA - ..." or "RELEASE - ..."
-# message prefix depending on which branch (main vs. tag) produced it. This
+# message prefix depending on whether the tag it wrote is a clean X.Y.Z or a
+# prerelease (X.Y.Z-something), regardless of which branch produced it. This
 # checks that commit message directly rather than grepping images.yaml
 # content: platform-helm-config hosts multiple independently-versioned
 # OCI-chart apps (audit_chart_version, filestore_chart_version, ...) sharing
@@ -134,7 +135,17 @@ stages:
           CHANGED_KEYS=$(git diff $(Build.SourceVersion)~1 $(Build.SourceVersion) -- environments/test/images.yaml | grep -E '^\+  [a-zA-Z0-9_]+:' | sed -E 's/^\+  ([a-zA-Z0-9_]+):.*/\1/' | sort -u)
           echo "Promoting changed keys: $CHANGED_KEYS"
           for KEY in $CHANGED_KEYS; do
-            VALUE=$(grep -E "^  ${KEY}:" environments/test/images.yaml | sed -E "s/^  ${KEY}: *//")
+            # Read the value from test/images.yaml AS OF the triggering
+            # commit, not from the live checked-out working tree. This job
+            # can run well after later commits land on main (queued
+            # builds, retries), and the git reset --hard origin/main above
+            # always fast-forwards the checkout to whatever is newest --
+            # confirmed live: a queued RELEASE build for identity_server
+            # promoted a later, unrelated BETA commit's 3.1.6-beta.3 to
+            # production instead of its own release's tag, because the
+            # plain grep below read main's tip at run time rather than the
+            # file as it stood in $(Build.SourceVersion).
+            VALUE=$(git show $(Build.SourceVersion):environments/test/images.yaml | grep -E "^  ${KEY}:" | sed -E "s/^  ${KEY}: *//")
             if grep -qE "^  ${KEY}:" environments/production/images.yaml; then
               sed -i -E "s|^  ${KEY}:.*|  ${KEY}: ${VALUE}|" environments/production/images.yaml
             else
