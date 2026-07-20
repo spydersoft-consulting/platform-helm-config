@@ -1,3 +1,14 @@
+parameters:
+  # Pool selection: set vmImage to run on a Microsoft-hosted agent (e.g.
+  # "ubuntu-latest"); leave it empty (the default) to use the self-hosted
+  # poolName pool instead. vmImage takes precedence when both are set.
+  - name: poolName
+    type: string
+    default: Default
+  - name: vmImage
+    type: string
+    default: ""
+
 stages:
 # Every automated build (beta or release) writes to environments/test/images.yaml
 # via process-cicd.ps1, which commits with a "BETA - ..." or "RELEASE - ..."
@@ -31,7 +42,10 @@ stages:
   jobs:
     - job: detect
       pool:
-        name: Default
+        ${{ if ne(parameters.vmImage, '') }}:
+          vmImage: ${{ parameters.vmImage }}
+        ${{ else }}:
+          name: ${{ parameters.poolName }}
       steps:
         - script: |
             commitMessage="$(Build.SourceVersionMessage)"
@@ -55,6 +69,8 @@ stages:
     argoRepoName: ops_nonprod_cluster
     argoBaseDir: apps/platform
     helmfileVersion: "1.1.5"
+    poolName: ${{ parameters.poolName }}
+    vmImage: ${{ parameters.vmImage }}
     pregenerateSteps:
       - task: Docker@2
         displayName: Login to Container Registry (for OCI chart pulls)
@@ -75,6 +91,8 @@ stages:
     argoRepoName: ops_prod_cluster
     argoBaseDir: apps/platform
     helmfileVersion: "1.1.5"
+    poolName: ${{ parameters.poolName }}
+    vmImage: ${{ parameters.vmImage }}
     dependsOn:
       - generate_commit_manifest_test
       - detect_version

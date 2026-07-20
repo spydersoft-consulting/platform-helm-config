@@ -34,3 +34,5 @@ pr: none
 
 extends:
   template: deploy.yml
+  parameters:
+    vmImage: ubuntu-latest
