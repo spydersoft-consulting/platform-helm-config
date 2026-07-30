@@ -12,6 +12,15 @@ controllers:
     replicas: 1
     revisionHistoryLimit: 1
     strategy: Recreate
+    # minAvailable (not maxUnavailable) -- this is a single-replica
+    # controller, so maxUnavailable: 1 would allow evicting its only pod
+    # (1 unavailable out of 1 total still satisfies "at most 1
+    # unavailable"). minAvailable: 1 actually blocks eviction of the sole
+    # replica. `controller` is auto-set to this controller's identifier by
+    # common's render logic - no need to specify it here.
+    podDisruptionBudget:
+      enabled: true
+      minAvailable: 1
     pod:
       annotations:
         linkerd.io/inject: disabled
@@ -45,6 +54,7 @@ service:
       postgres:
         enabled: true
         port: 5432
+
 
 configMaps:
   postgres-init-data:
