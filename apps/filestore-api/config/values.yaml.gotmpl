@@ -23,7 +23,11 @@ configMaps:
 
       # --- Storage (S3-compatible) ---
       Storage__ServiceUrl: "https://gs3.mattgerega.net"
-      Storage__BucketName: "filestore"
+      {{ if eq .Environment.Name "test" }}
+      Storage__BucketName: "file-storage-test"
+      {{ else }}
+      Storage__BucketName: "file-storage-production"
+      {{ end }}
       Storage__Region: "us-east-1"
 
       # --- Telemetry ---
