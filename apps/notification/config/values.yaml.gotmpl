@@ -1,0 +1,70 @@
+controllers:
+  notification-api:
+    containers:
+      main:
+        image:
+          tag: {{ .Values.imageTags.notification_api }}
+        envFrom:
+          - secretRef:
+              name: notification-secrets
+          - configMapRef:
+              identifier: notification
+        env:
+          # bjw-s's common chart names the hub Service "<release>-notification-hub"
+          # (no forceRename set on it, unlike the data chart's postgres
+          # Service) -- confirmed by rendering the notification chart locally
+          # with `helm template`. This must be updated if the notification-app
+          # release name below ever changes. Same release-name-prefixed-DNS
+          # precedent as filestore-secrets-es.yaml's `filestore-data-postgres`.
+          - name: Notification__HubInternalUrl
+            value: "http://notification-app-notification-hub/internal"
+        resources:
+          requests:
+            cpu: 5m
+  notification-hub:
+    containers:
+      main:
+        image:
+          tag: {{ .Values.imageTags.notification_hub }}
+        envFrom:
+          - secretRef:
+              name: notification-secrets
+          - configMapRef:
+              identifier: notification
+        resources:
+          requests:
+            cpu: 5m
+
+configMaps:
+  notification:
+    enabled: true
+    data:
+      # --- Auth (shared by both controllers -- the hub validates the same
+      # JWT audience/authority as the API; see plans/notifications/realtime-spec.md) ---
+      Auth__Authority: "https://auth.{{ .Values.environment_hostname }}"
+      Auth__Audience: "notification-api"
+
+      # --- Telemetry ---
+      Telemetry__Trace__Otlp__Endpoint: "{{ .Values.alloy_otlp_collector }}"
+      Telemetry__Log__Otlp__Endpoint: "{{ .Values.alloy_otlp_collector }}"
+      Telemetry__Metrics__Otlp__Endpoint: "{{ .Values.alloy_otlp_collector }}"
+      Telemetry__ServiceName: "Notification.{{ title .Values.env_name }}"
+      Telemetry__ActivitySourceName: "Notification.{{ title .Values.env_name }}.Activity"
+      Telemetry__MeterName: "Notification.{{ title .Values.env_name }}.Meter"
+
+      # --- Logging ---
+      {{ if eq .Environment.Name "test" }}
+      Serilog__MinimumLevel__Default: "Information"
+      {{ else }}
+      Serilog__MinimumLevel__Default: "Warning"
+      {{ end }}
+
+route:
+  notification-api:
+    hostnames:
+    - notify.{{ .Values.environment_hostname }}
+  notification-hub:
+    hostnames:
+    - notify-hub.{{ .Values.environment_hostname }}
+
+env_name: {{ .Values.env_name }}

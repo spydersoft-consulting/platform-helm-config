@@ -1,0 +1,30 @@
+releases:
+  # Vault-backed secrets + a self-hosted Postgres consumed by the
+  # notification-app release below (notification-secrets Secret: Postgres
+  # connection string + the shared hub-internal-push bearer token; both
+  # notification-api and notification-hub read the same secret). Kept as its
+  # own local chart, distinct Chart.yaml name from the OCI chart, to avoid
+  # the manifest-collision pitfall documented in the helm-release-rename-runbook.
+  - name: notification-data
+    chart: ./charts/{{ .Release.Name }}
+    namespace: "platform-{{ .Environment.Name }}"
+    missingFileHandler: Warn
+    values:
+    - config/data-values.yaml.gotmpl
+    - config/{{ .Environment.Name }}.yaml
+
+  # The app itself (notification-api + notification-hub), published as an
+  # OCI chart from the notification repo and versioned alongside its image
+  # tags. See plans/notifications/infrastructure.md for the two-controller
+  # topology rationale.
+  - name: notification-app
+    chart: oci://ghcr.io/spydersoft-consulting/charts/notification
+    version: "{{ .Values.imageTags.notification_chart_version }}"
+    namespace: "platform-{{ .Environment.Name }}"
+    missingFileHandler: Warn
+    values:
+    - config/values.yaml.gotmpl
+    - config/{{ .Environment.Name }}.yaml
+
+apiVersions:
+- gateway.networking.k8s.io/v1/HTTPRoute
