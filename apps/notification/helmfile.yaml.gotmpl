@@ -6,7 +6,7 @@ releases:
   # own local chart, distinct Chart.yaml name from the OCI chart, to avoid
   # the manifest-collision pitfall documented in the helm-release-rename-runbook.
   - name: notification-data
-    chart: ./charts/{{ .Release.Name }}
+    chart: ./charts/{{`{{ .Release.Name }}`}}
     namespace: "platform-{{ .Environment.Name }}"
     missingFileHandler: Warn
     values:
