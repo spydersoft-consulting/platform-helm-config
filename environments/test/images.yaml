@@ -8,6 +8,6 @@ imageTags:
   identity_admin_frontend: 3.2.0
   identity_chart_version: 3.2.0
   identity_server: 3.2.0
-  notification_api: 0.0.1-beta.1
-  notification_chart_version: 0.0.1-beta.1
-  notification_hub: 0.0.1-beta.1
+  notification_api: 1.0.0
+  notification_chart_version: 1.0.0
+  notification_hub: 1.0.0
