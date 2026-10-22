@@ -1,0 +1,56 @@
+controllers:
+  email-api:
+    containers:
+      main:
+        image:
+          tag: {{ .Values.imageTags | get "email_api" "latest" }}
+        envFrom:
+          - secretRef:
+              name: email-secrets
+          - configMapRef:
+              identifier: email
+        resources:
+          requests:
+            cpu: 5m
+
+configMaps:
+  email:
+    enabled: true
+    data:
+      # --- Auth ---
+      Auth__Authority: "https://auth.{{ .Values.environment_hostname }}"
+      Auth__Audience: "email-api"
+
+      # --- Sending identity ---
+      # The verified Resend domain is per Resend account: test and stage share the
+      # nonproduction domain, production has its own. The local part distinguishes
+      # test from stage mail.
+      {{ if eq .Environment.Name "production" }}
+      Email__SendingDomain: "mattgerega.com"
+      Email__DefaultFrom: "Spydersoft <noreply@mattgerega.com>"
+      {{ else }}
+      Email__SendingDomain: "mattgerega.net"
+      Email__DefaultFrom: "Spydersoft <{{ .Environment.Name }}-noreply@mattgerega.net>"
+      {{ end }}
+
+      # --- Telemetry ---
+      Telemetry__Trace__Otlp__Endpoint: "{{ .Values.alloy_otlp_collector }}"
+      Telemetry__Log__Otlp__Endpoint: "{{ .Values.alloy_otlp_collector }}"
+      Telemetry__Metrics__Otlp__Endpoint: "{{ .Values.alloy_otlp_collector }}"
+      Telemetry__ServiceName: "Email.{{ title .Values.env_name }}"
+      Telemetry__ActivitySourceName: "Email.{{ title .Values.env_name }}.Activity"
+      Telemetry__MeterName: "Email.{{ title .Values.env_name }}.Meter"
+
+      # --- Logging ---
+      {{ if eq .Environment.Name "test" }}
+      Serilog__MinimumLevel__Default: "Information"
+      {{ else }}
+      Serilog__MinimumLevel__Default: "Warning"
+      {{ end }}
+
+route:
+  email-api:
+    hostnames:
+    - email.{{ .Values.environment_hostname }}
+
+env_name: {{ .Values.env_name }}
