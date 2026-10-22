@@ -1,0 +1,33 @@
+releases:
+  # Vault-backed secrets + a self-hosted Postgres consumed by the email-app
+  # release below (email-secrets Secret: Postgres connection string + Resend
+  # API key and webhook signing secret). Own local chart, distinct Chart.yaml
+  # name from the OCI chart, to avoid the manifest-collision pitfall in the
+  # helm-release-rename-runbook.
+  #
+  # Only installed in environments that have been provisioned (Vault secrets
+  # under secrets-k8/email/<env>/ and image tags in images.yaml); add an
+  # environment to the list when promoting.
+  - name: email-data
+    installed: {{ has .Environment.Name (list "test") }}
+    chart: ./charts/{{`{{ .Release.Name }}`}}
+    namespace: "platform-{{ .Environment.Name }}"
+    missingFileHandler: Warn
+    values:
+    - config/data-values.yaml.gotmpl
+    - config/{{ .Environment.Name }}.yaml
+
+  # The app itself (email-api), published as an OCI chart from the email repo
+  # and versioned alongside its image tag.
+  - name: email-app
+    installed: {{ has .Environment.Name (list "test") }}
+    chart: oci://ghcr.io/spydersoft-consulting/charts/email
+    version: "{{ .Values.imageTags | get "email_chart_version" "0.0.0" }}"
+    namespace: "platform-{{ .Environment.Name }}"
+    missingFileHandler: Warn
+    values:
+    - config/values.yaml.gotmpl
+    - config/{{ .Environment.Name }}.yaml
+
+apiVersions:
+- gateway.networking.k8s.io/v1/HTTPRoute
