@@ -22,15 +22,13 @@ configMaps:
       Auth__Audience: "email-api"
 
       # --- Sending identity ---
-      # The verified Resend domain is per Resend account: test and stage share the
-      # nonproduction domain, production has its own. The local part distinguishes
-      # test from stage mail.
-      {{ if eq .Environment.Name "production" }}
+      # One Resend account with one verified domain serves every environment; the
+      # local part distinguishes non-production mail.
       Email__SendingDomain: "mattgerega.com"
+      {{ if eq .Environment.Name "production" }}
       Email__DefaultFrom: "Spydersoft <noreply@mattgerega.com>"
       {{ else }}
-      Email__SendingDomain: "mattgerega.net"
-      Email__DefaultFrom: "Spydersoft <{{ .Environment.Name }}-noreply@mattgerega.net>"
+      Email__DefaultFrom: "Spydersoft <{{ .Environment.Name }}-noreply@mattgerega.com>"
       {{ end }}
 
       # --- Telemetry ---
