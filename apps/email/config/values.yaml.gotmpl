@@ -29,6 +29,10 @@ configMaps:
       Email__DefaultFrom: "Spydersoft <noreply@mattgerega.com>"
       {{ else }}
       Email__DefaultFrom: "Spydersoft <{{ .Environment.Name }}-noreply@mattgerega.com>"
+      # Resend delivers every event to every webhook endpoint in the account. Non-production
+      # tags its mail and handles only events carrying that tag; production (no tag) handles
+      # only untagged events.
+      Email__EnvironmentTag: "{{ .Environment.Name }}"
       {{ end }}
 
       # --- Telemetry ---
