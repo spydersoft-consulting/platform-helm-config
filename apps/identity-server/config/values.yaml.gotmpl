@@ -55,6 +55,16 @@ configMaps:
       Resend__EmailFrom: "Spydersoft {{ title .Values.env_name }}"
       {{ end }}
 
+      # Account email goes through the email service where it is deployed; elsewhere identity
+      # falls back to calling Resend directly. The client secret is EmailClient__ClientSecret
+      # in identity-server-secrets.
+      {{ if has .Environment.Name (list "test") }}
+      EmailClient__BaseUrl: "http://email-app.platform-{{ .Environment.Name }}"
+      EmailClient__TokenEndpoint: "https://auth.{{ .Values.environment_hostname }}/connect/token"
+      EmailClient__ClientId: "identity-server"
+      EmailClient__Scope: "email:send"
+      {{ end }}
+
       {{ if eq .Environment.Name "test"  }}
       Serilog__MinimumLevel__Default: "Information"
       Serilog__MinimumLevel__Override__Microsoft: "Information"

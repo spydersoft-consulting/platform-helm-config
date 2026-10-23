@@ -102,6 +102,11 @@ route:
 # inverse cutOver flag.
 renderSecrets: false
 
+# Adds the email-service client secret to identity-server-secrets. Set per environment by the
+# helmfile once secrets-k8/identity/<env>/email-client exists.
+emailClient:
+  enabled: false
+
 vault:
   environment: ""
 

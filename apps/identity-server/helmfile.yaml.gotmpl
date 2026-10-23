@@ -82,6 +82,9 @@ releases:
       value: {{ if has .Environment.Name (list "test" "production") }}1{{ else }}0{{ end }}
     - name: renderSecrets
       value: {{ has .Environment.Name (list "test" "production") }}
+    # Identity sends account email through the email service where it is deployed (test only for now).
+    - name: emailClient.enabled
+      value: {{ has .Environment.Name (list "test") }}
 
   # The apps themselves (main identity-server + admin-api + admin-frontend),
   # published as one OCI chart from the identity_server repo and versioned
