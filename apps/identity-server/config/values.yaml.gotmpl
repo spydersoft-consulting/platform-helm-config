@@ -44,6 +44,7 @@ configMaps:
     enabled: true
     data:
       Identity__AuthorityUrl: "https://auth.{{ .Values.environment_hostname }}"
+      IdentityServer__AdminUrl: "https://auth-admin.{{ .Values.environment_hostname }}"
       Telemetry__Trace__Otlp__Endpoint: "{{ .Values.alloy_otlp_collector}}"
       Telemetry__Log__Otlp__Endpoint: "{{ .Values.alloy_otlp_collector}}"
       Telemetry__Metrics__Otlp__Endpoint: "{{ .Values.alloy_otlp_collector}}"
