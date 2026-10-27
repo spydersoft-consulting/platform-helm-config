@@ -65,13 +65,7 @@ configMaps:
       EmailClient__Scope: "email:send"
       {{ end }}
 
-      {{ if eq .Environment.Name "test"  }}
-      Serilog__MinimumLevel__Default: "Information"
-      Serilog__MinimumLevel__Override__Microsoft: "Information"
-      Serilog__MinimumLevel__Override__System: "Information"
-      {{ else }}
       Serilog__MinimumLevel__Default: "Warning"
-      {{ end }}
       AllowedOrigins__0: "https://*.{{ .Values.environment_hostname }}"
       {{ if eq .Environment.Name "test"  }}
       AllowedOrigins__1: "http://localhost:3000"
@@ -89,11 +83,7 @@ configMaps:
       Telemetry__ActivitySourceName: "Identity.Admin.Api.{{ title .Values.env_name }}.Activity"
       Telemetry__MeterName: "Identity.Admin.Api.{{ title .Values.env_name }}.Meter"
 
-      {{ if eq .Environment.Name "test" }}
-      Serilog__MinimumLevel__Default: "Information"
-      {{ else }}
       Serilog__MinimumLevel__Default: "Warning"
-      {{ end }}
   admin-ui:
     enabled: true
     data:
@@ -113,11 +103,7 @@ configMaps:
       Telemetry__ActivitySourceName: "Identity.Admin.Ui.{{ title .Values.env_name }}.Activity"
       Telemetry__MeterName: "Identity.Admin.Ui.{{ title .Values.env_name }}.Meter"
 
-      {{ if eq .Environment.Name "test" }}
-      Serilog__MinimumLevel__Default: "Information"
-      {{ else }}
       Serilog__MinimumLevel__Default: "Warning"
-      {{ end }}
 
 route:
   main:

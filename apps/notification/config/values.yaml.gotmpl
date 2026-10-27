@@ -53,11 +53,7 @@ configMaps:
       Telemetry__MeterName: "Notification.{{ title .Values.env_name }}.Meter"
 
       # --- Logging ---
-      {{ if eq .Environment.Name "test" }}
-      Serilog__MinimumLevel__Default: "Information"
-      {{ else }}
       Serilog__MinimumLevel__Default: "Warning"
-      {{ end }}
 
 route:
   notification-api:
