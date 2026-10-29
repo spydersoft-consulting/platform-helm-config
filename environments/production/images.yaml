@@ -11,3 +11,5 @@ imageTags:
   notification_api: 1.1.0
   notification_chart_version: 1.1.0
   notification_hub: 1.1.0
+  email_api: 1.0.0
+  email_chart_version: 1.0.0
