@@ -4,8 +4,8 @@ imageTags:
   audit_processor: 1.0.2-beta.4
   email_api: 1.0.0
   email_chart_version: 1.0.0
-  filestore_api: 1.1.1-beta.4
-  filestore_chart_version: 1.1.1-beta.4
+  filestore_api: 1.1.1-nuget-upgrade-2026-11.5
+  filestore_chart_version: 1.1.1-nuget-upgrade-2026-11.5
   identity_admin_api: 3.4.0
   identity_admin_frontend: 3.4.0
   identity_chart_version: 3.4.0
