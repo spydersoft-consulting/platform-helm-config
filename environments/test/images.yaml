@@ -1,7 +1,7 @@
 imageTags:
-  audit_api: 1.0.2-beta.4
-  audit_chart_version: 1.0.2-beta.4
-  audit_processor: 1.0.2-beta.4
+  audit_api: 1.0.2-beta.5
+  audit_chart_version: 1.0.2-beta.5
+  audit_processor: 1.0.2-beta.5
   email_api: 1.0.0
   email_chart_version: 1.0.0
   filestore_api: 1.1.1-beta.5
