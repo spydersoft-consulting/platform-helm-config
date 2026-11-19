@@ -68,7 +68,7 @@ stages:
     helmfileDirectory: ./
     argoRepoName: ops_nonprod_cluster
     argoBaseDir: apps/platform
-    helmfileVersion: "1.1.5"
+    helmfileVersion: "1.8.4"
     poolName: ${{ parameters.poolName }}
     vmImage: ${{ parameters.vmImage }}
     pregenerateSteps:
@@ -90,7 +90,7 @@ stages:
     helmfileDirectory: ./
     argoRepoName: ops_prod_cluster
     argoBaseDir: apps/platform
-    helmfileVersion: "1.1.5"
+    helmfileVersion: "1.8.4"
     poolName: ${{ parameters.poolName }}
     vmImage: ${{ parameters.vmImage }}
     dependsOn:
